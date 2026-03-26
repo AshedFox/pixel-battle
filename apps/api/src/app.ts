@@ -1,7 +1,8 @@
 import Fastify from 'fastify';
+import { config } from './config';
 
 export function buildApp() {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: config.NODE_ENV === 'development' });
 
   return app;
 }
