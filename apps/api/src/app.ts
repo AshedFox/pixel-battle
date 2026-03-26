@@ -1,8 +1,11 @@
 import Fastify from 'fastify';
 import { config } from './config';
+import dbPlugin from './plugins/db';
 
 export function buildApp() {
   const app = Fastify({ logger: config.NODE_ENV === 'development' });
+
+  app.register(dbPlugin);
 
   return app;
 }
