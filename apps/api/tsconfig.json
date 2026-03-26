@@ -1,0 +1,4 @@
+{
+  "extends": "@repo/typescript-config/node-app.json",
+  "include": ["src/**/*"]
+}

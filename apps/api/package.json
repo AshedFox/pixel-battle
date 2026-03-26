@@ -1,0 +1,22 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "lint": "eslint \"src/**/*.ts*\""
+  },
+  "dependencies": {
+    "@repo/shared": "workspace:*",
+    "fastify": "^5.8.4",
+    "fastify-plugin": "^5.1.0"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
