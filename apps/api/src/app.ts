@@ -8,6 +8,7 @@ import {
   validatorCompiler,
   ZodTypeProvider,
 } from 'fastify-type-provider-zod';
+import { authPlugin } from './plugins/auth';
 
 export function buildApp() {
   const app = Fastify({
@@ -23,6 +24,7 @@ export function buildApp() {
     secret: config.COOKIE_SECRET,
   });
   app.register(dbPlugin);
+  app.register(authPlugin);
 
   return app;
 }
