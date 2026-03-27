@@ -1,10 +1,19 @@
 import Fastify from 'fastify';
 import { config } from './config';
 import dbPlugin from './plugins/db';
+import {
+  serializerCompiler,
+  validatorCompiler,
+  ZodTypeProvider,
+} from 'fastify-type-provider-zod';
 
 export function buildApp() {
-  const app = Fastify({ logger: config.NODE_ENV === 'development' });
+  const app = Fastify({
+    logger: config.NODE_ENV === 'development',
+  }).withTypeProvider<ZodTypeProvider>();
 
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
   app.register(dbPlugin);
 
   return app;
