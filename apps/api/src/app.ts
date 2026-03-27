@@ -9,6 +9,8 @@ import {
   ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import { authPlugin } from './plugins/auth';
+import { authRoutes } from './routes/auth';
+import { usersRoutes } from './routes/users';
 
 export function buildApp() {
   const app = Fastify({
@@ -25,6 +27,9 @@ export function buildApp() {
   });
   app.register(dbPlugin);
   app.register(authPlugin);
+
+  app.register(authRoutes, { prefix: '/api/auth' });
+  app.register(usersRoutes, { prefix: '/api/users' });
 
   return app;
 }
