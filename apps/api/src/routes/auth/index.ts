@@ -16,6 +16,14 @@ const cookieOptions = (maxAgeMs: number) => ({
   httpOnly: true,
   secure: config.NODE_ENV === 'production',
   maxAge: Math.floor(maxAgeMs / 1000),
+  path: '/',
+});
+
+const publicCookieOptions = (maxAgeMs: number) => ({
+  httpOnly: false,
+  secure: config.NODE_ENV === 'production',
+  maxAge: Math.floor(maxAgeMs / 1000),
+  path: '/',
 });
 
 export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
@@ -54,6 +62,12 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
         cookieOptions(config.REFRESH_TOKEN_LIFETIME),
       );
 
+      reply.setCookie(
+        config.AUTH_HINT_COOKIE_NAME,
+        '1',
+        publicCookieOptions(config.REFRESH_TOKEN_LIFETIME),
+      );
+
       return reply
         .code(200)
         .send({ accessToken, expiresAt: expiresAt.toISOString() });
@@ -86,6 +100,12 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
         config.REFRESH_COOKIE_NAME,
         refreshToken,
         cookieOptions(config.REFRESH_TOKEN_LIFETIME),
+      );
+
+      reply.setCookie(
+        config.AUTH_HINT_COOKIE_NAME,
+        '1',
+        publicCookieOptions(config.REFRESH_TOKEN_LIFETIME),
       );
 
       return reply
@@ -126,6 +146,12 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
         cookieOptions(config.REFRESH_TOKEN_LIFETIME),
       );
 
+      reply.setCookie(
+        config.AUTH_HINT_COOKIE_NAME,
+        '1',
+        publicCookieOptions(config.REFRESH_TOKEN_LIFETIME),
+      );
+
       return reply
         .status(200)
         .send({ accessToken, expiresAt: expiresAt.toISOString() });
@@ -153,6 +179,7 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
       }
 
       reply.clearCookie(config.REFRESH_COOKIE_NAME, cookieOptions(-1));
+      reply.clearCookie(config.AUTH_HINT_COOKIE_NAME, publicCookieOptions(-1));
 
       return reply.status(204).send();
     },
