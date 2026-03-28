@@ -3,6 +3,7 @@ import { config } from './config';
 import dbPlugin from './plugins/db';
 import fastifyJwt from '@fastify/jwt';
 import fastifyCookie from '@fastify/cookie';
+import fastifyRedis from '@fastify/redis';
 import {
   serializerCompiler,
   validatorCompiler,
@@ -27,6 +28,10 @@ export function buildApp() {
   });
   app.register(dbPlugin);
   app.register(authPlugin);
+
+  app.register(fastifyRedis, {
+    url: config.REDIS_URL,
+  });
 
   app.register(authRoutes, { prefix: '/api/auth' });
   app.register(usersRoutes, { prefix: '/api/users' });

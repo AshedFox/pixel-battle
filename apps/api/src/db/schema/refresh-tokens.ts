@@ -1,5 +1,7 @@
 import { index, pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
 import { users } from './users';
+import { AnyPgColumn } from 'drizzle-orm/pg-core';
+import { isNotNull } from 'drizzle-orm';
 
 export const refreshTokens = pgTable(
   'refresh_tokens',
@@ -13,9 +15,16 @@ export const refreshTokens = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    replacedByTokenId: uuid('replaced_by_token_id').references(
+      (): AnyPgColumn => refreshTokens.id,
+      { onDelete: 'set null' },
+    ),
   },
   (table) => [
     index('idx_refresh_tokens_user_id').on(table.userId),
+    index('idx_refresh_tokens_replaced_by_token_id')
+      .on(table.replacedByTokenId)
+      .where(isNotNull(table.replacedByTokenId)),
     index('idx_refresh_tokens_expires_at').on(table.expiresAt),
   ],
 );
