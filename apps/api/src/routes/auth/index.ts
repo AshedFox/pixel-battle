@@ -135,6 +135,11 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
       const tokens = await authService.rotateTokens(token, request.ip);
 
       if (!tokens) {
+        reply.clearCookie(config.REFRESH_COOKIE_NAME, cookieOptions(-1));
+        reply.clearCookie(
+          config.AUTH_HINT_COOKIE_NAME,
+          publicCookieOptions(-1),
+        );
         return reply.code(401).send({ message: 'Failed to refresh' });
       }
 
