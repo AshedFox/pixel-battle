@@ -1,13 +1,12 @@
 import { Toaster } from 'sonner';
+import { AuthProvider } from './components/AuthProvider';
 import { ThemeProvider } from 'next-themes';
 
 export function App() {
   return (
     <div>
       <ThemeProvider>
-        <div>
-          <h1>Pixel Battle</h1>
-        </div>
+        <AuthProvider></AuthProvider>
       </ThemeProvider>
       <Toaster />
     </div>
