@@ -9,19 +9,22 @@ const authResponseSchema = z.object({
 
 export const loginBodySchema = z.object({
   email: z.email(),
-  password: z
-    .string()
-    .min(8)
-    .regex(/[a-zA-Z]/, {
-      error: 'Password must contain at least one letter.',
-    })
-    .regex(/[0-9]/, { error: 'Password must contain at least one number.' }),
+  password: z.string().min(2).max(63),
 });
 
 export const loginResponseSchema = authResponseSchema;
 
-export const registerBodySchema = loginBodySchema
-  .extend({
+export const registerBodySchema = z
+  .object({
+    email: z.email(),
+    password: z
+      .string()
+      .min(8)
+      .max(63)
+      .regex(/[a-zA-Z]/, {
+        error: 'Password must contain at least one letter.',
+      })
+      .regex(/[0-9]/, { error: 'Password must contain at least one number.' }),
     passwordComparison: z.string(),
     name: z.string().min(2).max(127),
   })
