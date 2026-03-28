@@ -24,7 +24,11 @@ export class AuthService {
     private readonly jwt: JWT,
   ) {}
 
-  async makeTokens(userId: string, ip: string) {
+  async makeTokens(
+    userId: string,
+    ip: string,
+    replacedRefreshTokenId?: string,
+  ) {
     const accessToken = this.jwt.sign(
       { sub: userId },
       { algorithm: 'HS512', expiresIn: config.JWT_LIFETIME },
@@ -53,7 +57,7 @@ export class AuthService {
         );
       }
 
-      return tx
+      const result = await tx
         .insert(refreshTokens)
         .values({
           userId,
@@ -63,6 +67,15 @@ export class AuthService {
         })
         .returning({ id: refreshTokens.id })
         .then((r) => r[0]);
+
+      if (replacedRefreshTokenId) {
+        await tx
+          .update(refreshTokens)
+          .set({ replacedByTokenId: result.id })
+          .where(eq(refreshTokens.id, replacedRefreshTokenId));
+      }
+
+      return result;
     });
 
     const refreshToken = `${refreshTokenId}.${refreshTokenSecret}`;
@@ -108,7 +121,9 @@ export class AuthService {
       .then((r) => r[0] ?? null);
   }
 
-  async verifyRefresh(token: string) {
+  async verifyRefresh(
+    token: string,
+  ): Promise<{ id: string; userId: string; isRetry?: boolean } | null> {
     const [tokenId, secret] = token.split('.');
 
     if (!tokenId || !secret) {
@@ -136,6 +151,22 @@ export class AuthService {
       }
 
       if (existing.revokedAt !== null || existing.expiresAt < new Date()) {
+        if (existing.replacedByTokenId) {
+          const replacement = await tx
+            .select()
+            .from(refreshTokens)
+            .where(eq(refreshTokens.id, existing.replacedByTokenId))
+            .then((r) => r[0] ?? null);
+
+          if (replacement && replacement.revokedAt === null) {
+            return {
+              id: replacement.id,
+              userId: replacement.userId,
+              isRetry: true,
+            };
+          }
+        }
+
         await tx
           .update(refreshTokens)
           .set({ revokedAt: new Date() })
