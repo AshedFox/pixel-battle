@@ -27,7 +27,7 @@ const publicCookieOptions = (maxAgeMs: number) => ({
 });
 
 export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
-  const authService = new AuthService(fastify.db, fastify.jwt);
+  const authService = new AuthService(fastify.db, fastify.jwt, fastify.redis);
 
   fastify.register(fastifyRateLimit, {
     max: 10,

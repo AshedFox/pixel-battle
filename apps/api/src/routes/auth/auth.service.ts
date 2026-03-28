@@ -6,6 +6,7 @@ import { JWT } from '@fastify/jwt';
 import { config } from '../../config';
 import { randomBytes } from 'crypto';
 import { refreshTokens } from '../../db/schema/refresh-tokens';
+import Redis from 'ioredis';
 
 const argonOptions: argon2.Options = {
   memoryCost: 2 ** 16,
@@ -22,6 +23,7 @@ export class AuthService {
   constructor(
     private readonly db: Database['db'],
     private readonly jwt: JWT,
+    private readonly redis: Redis,
   ) {}
 
   async makeTokens(
@@ -222,13 +224,80 @@ export class AuthService {
     return true;
   }
 
-  async rotateTokens(refreshToken: string, ip: string) {
-    const verified = await this.verifyRefresh(refreshToken);
+  private async waitForGrace(graceKey: string, attempts = 20, delayMs = 100) {
+    for (let i = 0; i < attempts; i++) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      const cached = await this.redis.get(graceKey);
+      if (cached) {
+        const tokens = JSON.parse(cached) as {
+          accessToken: string;
+          refreshToken: string;
+          expiresAt: string;
+        };
 
-    if (!verified) {
-      return null;
+        return {
+          ...tokens,
+          expiresAt: new Date(tokens.expiresAt),
+        };
+      }
+    }
+    return null;
+  }
+
+  async rotateTokens(refreshToken: string, ip: string) {
+    const [tokenId] = refreshToken.split('.');
+    const lockKey = `refresh_lock:${tokenId}`;
+    const graceKey = `refresh_grace:${tokenId}`;
+
+    const locked = await this.redis.set(lockKey, '1', 'EX', 5, 'NX');
+
+    if (!locked) {
+      return this.waitForGrace(graceKey);
     }
 
-    return this.makeTokens(verified.userId, ip);
+    try {
+      const cached = await this.redis.get(graceKey);
+
+      if (cached) {
+        const tokens = JSON.parse(cached) as {
+          accessToken: string;
+          refreshToken: string;
+          expiresAt: string;
+        };
+
+        return {
+          ...tokens,
+          expiresAt: new Date(tokens.expiresAt),
+        };
+      }
+
+      const verified = await this.verifyRefresh(refreshToken);
+      if (!verified) {
+        return null;
+      }
+
+      if (verified.isRetry) {
+        await this.db
+          .update(refreshTokens)
+          .set({ revokedAt: new Date() })
+          .where(eq(refreshTokens.id, verified.id));
+      }
+
+      const tokens = await this.makeTokens(verified.userId, ip, tokenId);
+
+      await this.redis.set(
+        graceKey,
+        JSON.stringify({
+          ...tokens,
+          expiresAt: tokens.expiresAt.toISOString(),
+        }),
+        'EX',
+        10,
+      );
+
+      return tokens;
+    } finally {
+      await this.redis.del(lockKey);
+    }
   }
 }
