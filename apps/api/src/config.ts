@@ -10,6 +10,7 @@ const envSchema = z.object({
   AUTH_HINT_COOKIE_NAME: z.string().default('is_auth'),
   REFRESH_TOKEN_SECRET: z.string(),
   REFRESH_TOKEN_LIFETIME: z.coerce.number().min(60000),
+  PIXEL_COOLDOWN_MS: z.coerce.number().min(0),
   REDIS_URL: z.string(),
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
