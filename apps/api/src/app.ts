@@ -15,7 +15,8 @@ import { usersRoutes } from './routes/users';
 
 export function buildApp() {
   const app = Fastify({
-    logger: config.NODE_ENV === 'development',
+    logger: true,
+    disableRequestLogging: config.NODE_ENV !== 'development',
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
