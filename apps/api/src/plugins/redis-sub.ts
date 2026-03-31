@@ -10,7 +10,7 @@ declare module 'fastify' {
 export const redisSubPlugin = fp(async (fastify) => {
   try {
     fastify.log.info('Connecting to Redis Sub...');
-    const redisSub = fastify.redis.duplicate();
+    const redisSub = fastify.redis.duplicate({ lazyConnect: false });
 
     await new Promise<void>((resolve, reject) => {
       redisSub.once('ready', resolve);
