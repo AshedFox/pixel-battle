@@ -13,6 +13,7 @@ import {
 import { authPlugin } from './plugins/auth';
 import { authRoutes } from './routes/auth';
 import { usersRoutes } from './routes/users';
+import { redisSubPlugin } from './plugins/redis-sub';
 
 export function buildApp() {
   const app = Fastify({
@@ -34,6 +35,8 @@ export function buildApp() {
   app.register(fastifyRedis, {
     url: config.REDIS_URL,
   });
+  app.register(redisSubPlugin);
+
   app.register(fastifyWebsocket);
 
   app.register(authRoutes, { prefix: '/api/auth' });
