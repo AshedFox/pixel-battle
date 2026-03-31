@@ -17,12 +17,15 @@ import { redisSubPlugin } from './plugins/redis-sub';
 import { canvasPlugin } from './plugins/canvas';
 import { canvasRoutes } from './routes/canvas';
 import { canvasWsRoute } from './routes/canvas/ws';
+import { healthRoutes } from './routes/health';
 
 export function buildApp() {
   const app = Fastify({
     logger: true,
     disableRequestLogging: config.NODE_ENV !== 'development',
   }).withTypeProvider<ZodTypeProvider>();
+
+  app.register(healthRoutes, { prefix: '/api' });
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
