@@ -8,15 +8,21 @@ declare module 'fastify' {
   }
 }
 
-const dbPlugin: FastifyPluginAsync = fp(async (app) => {
-  const { db, pool } = createDatabase();
+export const dbPlugin: FastifyPluginAsync = fp(async (app) => {
+  try {
+    app.log.info('Connecting to PostgreSQL...');
 
-  app.decorate('db', db);
+    const { db, pool } = await createDatabase();
 
-  app.addHook('onClose', async () => {
-    await pool.end();
-    app.log.info('Database pool closed');
-  });
+    app.decorate('db', db);
+    app.log.info('PostgreSQL connected successfully');
+
+    app.addHook('onClose', async () => {
+      await pool.end();
+      app.log.info('Database pool closed');
+    });
+  } catch (err) {
+    app.log.error('Failed to connect to PostgreSQL');
+    throw err;
+  }
 });
-
-export default dbPlugin;

@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import { config } from './config';
-import dbPlugin from './plugins/db';
+import { dbPlugin } from './plugins/db';
 import fastifyJwt from '@fastify/jwt';
 import fastifyCookie from '@fastify/cookie';
 import fastifyRedis from '@fastify/redis';
