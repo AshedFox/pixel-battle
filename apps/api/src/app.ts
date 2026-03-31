@@ -37,6 +37,15 @@ export function buildApp() {
 
   app.register(fastifyRedis, {
     url: config.REDIS_URL,
+    maxRetriesPerRequest: 1,
+    connectTimeout: 2000,
+    lazyConnect: true,
+    retryStrategy(times) {
+      if (times > 2) {
+        return null;
+      }
+      return Math.min(times * 200, 1000);
+    },
   });
   app.register(redisSubPlugin);
 
