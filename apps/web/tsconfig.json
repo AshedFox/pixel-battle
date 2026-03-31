@@ -4,7 +4,8 @@
     "baseUrl": ".",
     "outDir": "dist",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@repo/shared": ["../../packages/shared/src"]
     }
   },
   "include": ["src/**/*"]
