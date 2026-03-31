@@ -1,7 +1,6 @@
 import { PixelUpdateData } from '@repo/shared';
 import { PubSubService } from '../pubsub/pubsub.service';
-
-const DEFAULT_FLUSH_INTERVAL_MS = 50;
+import { config } from '../../config';
 
 export class PixelUpdateBatchService {
   private buffer: PixelUpdateData[] = [];
@@ -11,14 +10,16 @@ export class PixelUpdateBatchService {
   constructor(
     private readonly pubSub: PubSubService,
     private readonly onFlush: (data: PixelUpdateData[]) => Promise<void> | void,
-    private readonly flushIntervalMs = DEFAULT_FLUSH_INTERVAL_MS,
   ) {}
 
   publish(pixel: PixelUpdateData): void {
     this.buffer.push(pixel);
 
     if (this.timer === null) {
-      this.timer = setTimeout(() => this.flush(), this.flushIntervalMs);
+      this.timer = setTimeout(
+        () => this.flush(),
+        config.PIXEL_UPDATE_FLUSH_INTERVAL,
+      );
     }
   }
 
