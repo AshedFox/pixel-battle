@@ -1,14 +1,21 @@
-import React, { Suspense } from 'react';
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Home } from './pages/Home';
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Toaster } from 'sonner';
 import { Spinner } from './components/ui/spinner';
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import { GuestRoute } from './components/GuestRoute';
 import { ThemeProvider } from 'next-themes';
+
+const Home = lazy(() =>
+  import('./pages/Home').then((m) => ({ default: m.Home })),
+);
+const Login = lazy(() =>
+  import('./pages/Login').then((m) => ({ default: m.Login })),
+);
+const Register = lazy(() =>
+  import('./pages/Register').then((m) => ({ default: m.Register })),
+);
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
