@@ -1,3 +1,4 @@
+import { config } from '../../config';
 import { Database } from '../../db';
 import { drawEvents } from '../../db/schema/draw-events';
 import Redis from 'ioredis';
@@ -12,8 +13,6 @@ type DrawEvent = {
 
 const EVENTS_KEY = 'canvas:draw_events';
 const PROCESSING_EVENTS_KEY = 'canvas:draw_events_processing';
-const DEFAULT_FLUSH_INTERVAL_MS = 1_000;
-const DEFAULT_FLUSH_THRESHOLD = 500;
 
 export class CanvasBatchService {
   private interval?: NodeJS.Timeout;
@@ -22,13 +21,12 @@ export class CanvasBatchService {
   constructor(
     private readonly db: Database['db'],
     private readonly redis: Redis,
-    private readonly flushThreshold = DEFAULT_FLUSH_THRESHOLD,
   ) {}
 
   async add(event: DrawEvent) {
     const length = await this.redis.rpush(EVENTS_KEY, JSON.stringify(event));
 
-    if (length >= this.flushThreshold) {
+    if (length >= config.CANVAS_FLUSH_THRESHOD) {
       void this.flush();
     }
   }
@@ -68,6 +66,7 @@ export class CanvasBatchService {
         await this.db.insert(drawEvents).values(batch);
         await this.redis.del(PROCESSING_EVENTS_KEY);
       } catch {
+        console.error('Failed to write batched events into database');
         await this.redis.rename(PROCESSING_EVENTS_KEY, EVENTS_KEY);
       }
     } finally {
@@ -75,8 +74,11 @@ export class CanvasBatchService {
     }
   }
 
-  start(ms = DEFAULT_FLUSH_INTERVAL_MS) {
-    this.interval = setInterval(() => void this.flush(), ms);
+  start() {
+    this.interval = setInterval(
+      () => void this.flush(),
+      config.CANVAS_FLUSH_INTERVAL,
+    );
   }
 
   async stop() {

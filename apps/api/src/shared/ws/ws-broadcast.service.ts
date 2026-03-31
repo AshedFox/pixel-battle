@@ -1,22 +1,19 @@
 import { WebSocketServer } from 'ws';
-
-const DEFAULT_CHUNK = 100;
+import { config } from '../../config';
 
 export class WSBroadcastService {
-  constructor(
-    private readonly wss: WebSocketServer,
-    private readonly chunk = DEFAULT_CHUNK,
-  ) {}
+  constructor(private readonly wss: WebSocketServer) {}
 
   async broadcast(payload: string): Promise<void> {
+    const chunk = config.WS_BROADCAST_CHUNK;
     const clients = [...this.wss.clients];
-    for (let i = 0; i < clients.length; i += this.chunk) {
-      for (const client of clients.slice(i, i + this.chunk)) {
+    for (let i = 0; i < clients.length; i += chunk) {
+      for (const client of clients.slice(i, i + chunk)) {
         if (client.readyState === client.OPEN) {
           client.send(payload);
         }
       }
-      if (i + this.chunk < clients.length) {
+      if (i + chunk < clients.length) {
         await new Promise((r) => setImmediate(r));
       }
     }
