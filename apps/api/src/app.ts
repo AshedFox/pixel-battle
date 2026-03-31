@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import { config } from './config';
-import dbPlugin from './plugins/db';
+import { dbPlugin } from './plugins/db';
 import fastifyJwt from '@fastify/jwt';
 import fastifyCookie from '@fastify/cookie';
 import fastifyRedis from '@fastify/redis';
@@ -15,7 +15,8 @@ import { usersRoutes } from './routes/users';
 
 export function buildApp() {
   const app = Fastify({
-    logger: config.NODE_ENV === 'development',
+    logger: true,
+    disableRequestLogging: config.NODE_ENV !== 'development',
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
@@ -42,7 +43,7 @@ export function buildApp() {
 async function start() {
   const app = buildApp();
   try {
-    await app.listen({ port: 3000, host: '0.0.0.0' });
+    await app.listen({ port: 3000 });
   } catch (err) {
     app.log.error(err);
     process.exit(1);
