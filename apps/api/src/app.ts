@@ -15,6 +15,7 @@ import { authRoutes } from './routes/auth';
 import { usersRoutes } from './routes/users';
 import { redisSubPlugin } from './plugins/redis-sub';
 import { canvasPlugin } from './plugins/canvas';
+import { canvasRoutes } from './routes/canvas';
 
 export function buildApp() {
   const app = Fastify({
@@ -44,6 +45,7 @@ export function buildApp() {
 
   app.register(authRoutes, { prefix: '/api/auth' });
   app.register(usersRoutes, { prefix: '/api/users' });
+  app.register(canvasRoutes, { prefix: '/api/canvas' });
 
   return app;
 }
