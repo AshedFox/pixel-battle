@@ -19,6 +19,7 @@ const envSchema = z.object({
   CANVAS_FLUSH_THRESHOD: z.coerce.number().default(1000),
   PIXEL_UPDATE_FLUSH_INTERVAL: z.coerce.number().default(100),
   WS_BROADCAST_CHUNK: z.coerce.number().default(100),
+  ONLINE_HEARTBEAT_INTERVAL: z.coerce.number().default(30000),
 });
 
 export const config = envSchema.parse(process.env);
