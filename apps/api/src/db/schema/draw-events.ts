@@ -25,3 +25,6 @@ export const drawEvents = pgTable(
     index('idx_x_y').on(table.x, table.y),
   ],
 );
+
+export type DrawEvent = typeof drawEvents.$inferSelect;
+export type NewDrawEvent = typeof drawEvents.$inferInsert;
