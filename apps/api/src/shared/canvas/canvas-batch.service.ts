@@ -1,15 +1,6 @@
 import { config } from '../../config';
-import { Database } from '../../db';
-import { drawEvents } from '../../db/schema/draw-events';
+import { NewDrawEvent } from '../../db/schema/draw-events';
 import Redis from 'ioredis';
-
-type DrawEvent = {
-  x: number;
-  y: number;
-  timestamp: Date;
-  color: number;
-  userId: string;
-};
 
 const EVENTS_KEY = 'canvas:draw_events';
 const PROCESSING_EVENTS_KEY = 'canvas:draw_events_processing';
@@ -19,11 +10,11 @@ export class CanvasBatchService {
   private isFlushing = false;
 
   constructor(
-    private readonly db: Database['db'],
     private readonly redis: Redis,
+    private readonly onFlush: (events: NewDrawEvent[]) => Promise<void> | void,
   ) {}
 
-  async add(event: DrawEvent) {
+  async add(event: NewDrawEvent) {
     const length = await this.redis.rpush(EVENTS_KEY, JSON.stringify(event));
 
     if (length >= config.CANVAS_FLUSH_THRESHOD) {
@@ -54,7 +45,7 @@ export class CanvasBatchService {
 
       const items = await this.redis.lrange(PROCESSING_EVENTS_KEY, 0, -1);
 
-      const batch: DrawEvent[] = items.map((item) => {
+      const batch: NewDrawEvent[] = items.map((item) => {
         const parsed = JSON.parse(item);
         return {
           ...parsed,
@@ -63,10 +54,10 @@ export class CanvasBatchService {
       });
 
       try {
-        await this.db.insert(drawEvents).values(batch);
+        await this.onFlush(batch);
         await this.redis.del(PROCESSING_EVENTS_KEY);
       } catch {
-        console.error('Failed to write batched events into database');
+        console.error('Failed to process batched events');
         await this.redis.rename(PROCESSING_EVENTS_KEY, EVENTS_KEY);
       }
     } finally {

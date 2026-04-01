@@ -1,7 +1,15 @@
 import { FastifyPluginAsync } from 'fastify';
-import { cooldownResponseSchema } from '@repo/shared';
+import {
+  cooldownResponseSchema,
+  PixelInfoParams,
+  pixelInfoParamsSchema,
+  pixelInfoResponseSchema,
+} from '@repo/shared';
+import { PixelHistoryService } from '../../shared/canvas/pixel-history.service';
 
 export const canvasRoutes: FastifyPluginAsync = async (fastify) => {
+  const pixelHistoryService = new PixelHistoryService(fastify.db);
+
   fastify.get('/', { preHandler: fastify.authenticate }, async (_, reply) => {
     const state = await fastify.canvas.service.getFullState();
 
@@ -25,6 +33,30 @@ export const canvasRoutes: FastifyPluginAsync = async (fastify) => {
       return reply
         .code(200)
         .send({ availableAt: cooldown ? cooldown.toISOString() : null });
+    },
+  );
+
+  fastify.get<{ Params: PixelInfoParams }>(
+    '/:x/:y',
+    {
+      preHandler: fastify.authenticate,
+      schema: {
+        params: pixelInfoParamsSchema,
+        response: { 200: pixelInfoResponseSchema },
+      },
+    },
+    async (request, reply) => {
+      const pixelState = await pixelHistoryService.getLastPixelState(
+        request.params.x,
+        request.params.y,
+      );
+
+      return reply.code(200).send({
+        ...pixelState,
+        x: request.params.x,
+        y: request.params.y,
+        timestamp: pixelState.timestamp.toISOString(),
+      });
     },
   );
 };
