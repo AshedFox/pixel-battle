@@ -7,6 +7,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { PubSubService } from '../../shared/pubsub/pubsub.service';
 import { PixelUpdateBatchService } from '../../shared/canvas/pixel-update-batch.service';
 import { WSBroadcastService } from '../../shared/ws/ws-broadcast.service';
+import { CanvasOnlineService } from '../../shared/canvas/canvas-online.service';
 
 export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
   const pubSub = new PubSubService(
@@ -21,17 +22,21 @@ export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
     },
   );
   const wsBroadcastService = new WSBroadcastService(fastify.websocketServer);
+  const onlineService = new CanvasOnlineService(fastify.redis, pubSub);
 
   await pubSub.subscribe(async (message) =>
     wsBroadcastService.broadcast(JSON.stringify(message)),
   );
 
+  onlineService.startBroadcast();
+
   fastify.addHook('onClose', async () => {
     await fastify.canvas.batchService.stop();
     await pubSub.unsubscribe();
+    onlineService.stopBroadcast();
   });
 
-  fastify.get('/ws', { websocket: true }, (socket, request) => {
+  fastify.get('/ws', { websocket: true }, async (socket, request) => {
     const url = new URL(request.url, `http://${request.headers.host}`);
     const token = url.searchParams.get('token');
 
@@ -50,6 +55,12 @@ export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
       socket.close(4001, 'Unauthorized');
       return;
     }
+
+    await onlineService.connect(userId);
+
+    socket.on('close', async () => {
+      await onlineService.disconnect(userId);
+    });
 
     socket.on('message', async (raw) => {
       try {
