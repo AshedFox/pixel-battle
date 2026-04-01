@@ -16,9 +16,9 @@ export const drawEvents = pgTable(
     y: smallint('y').notNull(),
     timestamp: timestamp('timestamp').defaultNow().notNull(),
     color: smallint('color').notNull(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id),
+    userId: uuid('user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
   },
   (table) => [
     index('idx_user_id_timestamp').on(table.userId, table.timestamp),
