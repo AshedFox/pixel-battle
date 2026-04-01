@@ -9,4 +9,5 @@ export type WsClientMessage = {
 export type WsServerMessage =
   | { type: 'pixelUpdated'; data: PixelUpdateData }
   | { type: 'pixelsUpdated'; data: PixelsUpdateData }
+  | { type: 'onlineCount'; data: number }
   | { type: 'error'; data: ErrorResponse };
