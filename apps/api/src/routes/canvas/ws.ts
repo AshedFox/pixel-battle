@@ -56,10 +56,22 @@ export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
       return;
     }
 
-    await onlineService.connect(userId);
+    const connectionId = `${userId}:${randomUUID()}`;
 
-    socket.on('close', async () => {
-      await onlineService.disconnect(userId);
+    void onlineService.connect(connectionId).catch((err) => {
+      fastify.log.error(
+        { err, connectionId },
+        'Failed to register websocket connection in online service',
+      );
+    });
+
+    socket.on('close', () => {
+      void onlineService.disconnect(connectionId).catch((err) => {
+        fastify.log.error(
+          { err, connectionId },
+          'Failed to unregister websocket connection in online service',
+        );
+      });
     });
 
     socket.on('message', async (raw) => {
