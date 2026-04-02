@@ -1,16 +1,32 @@
 import { WebSocketServer } from 'ws';
 import { config } from '../../config';
 
+const BUFFERED_LIMIT = 1_000_000;
+
 export class WSBroadcastService {
   constructor(private readonly wss: WebSocketServer) {}
 
   async broadcast(payload: string): Promise<void> {
     const chunk = config.WS_BROADCAST_CHUNK;
     const clients = [...this.wss.clients];
+
     for (let i = 0; i < clients.length; i += chunk) {
       for (const client of clients.slice(i, i + chunk)) {
         if (client.readyState === client.OPEN) {
-          client.send(payload);
+          if (client.bufferedAmount > BUFFERED_LIMIT) {
+            client.close(1013, 'Client too slow reconnect required');
+            continue;
+          }
+
+          try {
+            client.send(payload, (err) => {
+              if (err) {
+                client.close(1011, 'Failed to send update');
+              }
+            });
+          } catch {
+            client.close(1011, 'Failed to send update');
+          }
         }
       }
       if (i + chunk < clients.length) {
