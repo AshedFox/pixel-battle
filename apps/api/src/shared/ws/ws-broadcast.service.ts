@@ -17,7 +17,16 @@ export class WSBroadcastService {
             client.close(1013, 'Client too slow reconnect required');
             continue;
           }
-          client.send(payload);
+
+          try {
+            client.send(payload, (err) => {
+              if (err) {
+                client.close(1011, 'Failed to send update');
+              }
+            });
+          } catch {
+            client.close(1011, 'Failed to send update');
+          }
         }
       }
       if (i + chunk < clients.length) {
