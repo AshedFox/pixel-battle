@@ -6,8 +6,14 @@ export type WsClientMessage = {
   data: PixelUpdateData;
 };
 
+type WsServerMessageWrapper<T extends string, D> = {
+  seq?: number;
+  type: T;
+  data: D;
+};
+
 export type WsServerMessage =
-  | { type: 'pixelUpdated'; data: PixelUpdateData }
-  | { type: 'pixelsUpdated'; data: PixelsUpdateData }
-  | { type: 'onlineCount'; data: number }
+  | WsServerMessageWrapper<'pixelUpdated', PixelUpdateData>
+  | WsServerMessageWrapper<'pixelsUpdated', PixelsUpdateData>
+  | WsServerMessageWrapper<'onlineCount', number>
   | { type: 'error'; data: ErrorResponse };
