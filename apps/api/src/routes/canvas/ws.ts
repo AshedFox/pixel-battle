@@ -8,6 +8,8 @@ import { PubSubService } from '../../shared/pubsub/pubsub.service';
 import { PixelUpdateBatchService } from '../../shared/canvas/pixel-update-batch.service';
 import { WSBroadcastService } from '../../shared/ws/ws-broadcast.service';
 import { CanvasOnlineService } from '../../shared/canvas/canvas-online.service';
+import { randomUUID } from 'crypto';
+import { CanvasSeqService } from '../../shared/canvas/canvas-seq.service';
 
 export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
   const pubSub = new PubSubService(
@@ -23,10 +25,13 @@ export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
   );
   const wsBroadcastService = new WSBroadcastService(fastify.websocketServer);
   const onlineService = new CanvasOnlineService(fastify.redis, pubSub);
+  const canvasSeqService = new CanvasSeqService(fastify.redis);
 
-  await pubSub.subscribe(async (message) =>
-    wsBroadcastService.broadcast(JSON.stringify(message)),
-  );
+  await pubSub.subscribe(async (message) => {
+    const seq = await canvasSeqService.increment();
+
+    await wsBroadcastService.broadcast(JSON.stringify({ ...message, seq }));
+  });
 
   onlineService.startBroadcast();
 
