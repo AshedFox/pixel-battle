@@ -27,6 +27,7 @@ export const canvasPlugin: FastifyPluginAsync = fp(async (fastify) => {
   });
 
   await canvasService.initIfEmpty();
+  await canvasBatchService.ensureGroup();
   await canvasBatchService.recoverProcessing();
   canvasBatchService.start();
 
