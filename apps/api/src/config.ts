@@ -20,6 +20,7 @@ const envSchema = z.object({
   PIXEL_UPDATE_FLUSH_INTERVAL: z.coerce.number().default(100),
   WS_BROADCAST_CHUNK: z.coerce.number().default(100),
   ONLINE_HEARTBEAT_INTERVAL: z.coerce.number().default(30000),
+  PIXEL_UPDATE_BUFFER_MAX: z.coerce.number().default(20000),
 });
 
 export const config = envSchema.parse(process.env);
