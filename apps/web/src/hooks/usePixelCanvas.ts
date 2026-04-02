@@ -49,9 +49,49 @@ export const usePixelCanvas = ({
 
   const { apiFetch, authData } = useAuth();
 
+  const lastSeqRef = useRef(0);
+  const lastSyncRef = useRef(0);
+
+  const syncCanvas = useCallback(async () => {
+    const now = Date.now();
+
+    if (now - lastSyncRef.current < 5_000) {
+      return;
+    }
+
+    lastSyncRef.current = now;
+
+    const res = await apiFetch(apiUrl);
+    const buf = await res.arrayBuffer();
+    const data = new Uint8Array(buf);
+
+    pixelDataRef.current = data;
+    rebuildImageData(data);
+    scheduleRedraw();
+  }, [apiFetch, apiUrl, pixelDataRef, rebuildImageData, scheduleRedraw]);
+
   const handleWsMessage = useCallback(
     (msg: unknown) => {
-      const { type, data } = msg as WsServerMessage;
+      const parsed = msg as WsServerMessage;
+      const { type, data } = parsed;
+
+      if (type !== 'error') {
+        const seq = parsed.seq;
+
+        if (typeof seq !== 'number') {
+          return;
+        }
+
+        if (
+          seq > 0 &&
+          lastSeqRef.current > 0 &&
+          seq !== lastSeqRef.current + 1
+        ) {
+          void syncCanvas();
+        }
+
+        lastSeqRef.current = seq;
+      }
 
       if (type === 'pixelUpdated') {
         applyPixel(data.x, data.y, data.color);
@@ -70,7 +110,13 @@ export const usePixelCanvas = ({
         onOnlineChange?.(data);
       }
     },
-    [applyPixel, writePixelToImageData, scheduleRedraw, onOnlineChange],
+    [
+      syncCanvas,
+      applyPixel,
+      writePixelToImageData,
+      scheduleRedraw,
+      onOnlineChange,
+    ],
   );
 
   const { send } = useWebSocket({
@@ -80,15 +126,8 @@ export const usePixelCanvas = ({
   });
 
   useEffect(() => {
-    apiFetch(apiUrl)
-      .then((res) => res.arrayBuffer())
-      .then((buf) => {
-        const data = new Uint8Array(buf);
-        pixelDataRef.current = data;
-        rebuildImageData(data);
-        scheduleRedraw();
-      });
-  }, [apiFetch, apiUrl, rebuildImageData, scheduleRedraw, pixelDataRef]);
+    void syncCanvas();
+  }, [syncCanvas]);
 
   const placePixel = useCallback(
     (x: number, y: number) => {
