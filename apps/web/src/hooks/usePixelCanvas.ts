@@ -19,6 +19,7 @@ type Props = {
   viewportRef: React.RefObject<Viewport>;
   selectedColorIndex: number;
   pendingPixel: Pixel | null;
+  onOnlineChange?: (newCount: number) => void;
 };
 
 export const usePixelCanvas = ({
@@ -28,6 +29,7 @@ export const usePixelCanvas = ({
   selectedColorIndex,
   viewportRef,
   pendingPixel,
+  onOnlineChange,
 }: Props) => {
   const selectedColorRef = useRef(selectedColorIndex);
   selectedColorRef.current = selectedColorIndex;
@@ -55,10 +57,7 @@ export const usePixelCanvas = ({
         applyPixel(data.x, data.y, data.color);
         writePixelToImageData(data.x, data.y, data.color);
         scheduleRedraw();
-        return;
-      }
-
-      if (type === 'pixelsUpdated') {
+      } else if (type === 'pixelsUpdated') {
         for (const { x, y, color } of data) {
           if (x < 0 || x >= CANVAS_WIDTH || y < 0 || y >= CANVAS_HEIGHT) {
             continue;
@@ -67,9 +66,11 @@ export const usePixelCanvas = ({
           writePixelToImageData(x, y, color);
         }
         scheduleRedraw();
+      } else if (type === 'onlineCount') {
+        onOnlineChange?.(data);
       }
     },
-    [applyPixel, writePixelToImageData, scheduleRedraw],
+    [applyPixel, writePixelToImageData, scheduleRedraw, onOnlineChange],
   );
 
   const { send } = useWebSocket({
