@@ -15,29 +15,32 @@ export class CanvasOnlineService {
     private readonly pubSub: PubSubService,
   ) {}
 
-  async connect(userId: string): Promise<void> {
+  async connect(connectionId: string): Promise<void> {
     await this.redis.zadd(
       ONLINE_KEY,
       Date.now() + this.hearbeatWithMargin,
-      userId,
+      connectionId,
     );
+
+    const baseInterval = config.ONLINE_HEARTBEAT_INTERVAL;
+    const jitter = Math.floor((Math.random() - 0.5) * (baseInterval / 4));
 
     const interval = setInterval(async () => {
       await this.redis.zadd(
         ONLINE_KEY,
         Date.now() + this.hearbeatWithMargin,
-        userId,
+        connectionId,
       );
-    }, config.ONLINE_HEARTBEAT_INTERVAL);
+    }, baseInterval + jitter);
 
-    this.heartbeats.set(userId, interval);
+    this.heartbeats.set(connectionId, interval);
   }
 
-  async disconnect(userId: string): Promise<void> {
-    clearInterval(this.heartbeats.get(userId));
+  async disconnect(connectionId: string): Promise<void> {
+    clearInterval(this.heartbeats.get(connectionId));
 
-    this.heartbeats.delete(userId);
-    await this.redis.zrem(ONLINE_KEY, userId);
+    this.heartbeats.delete(connectionId);
+    await this.redis.zrem(ONLINE_KEY, connectionId);
   }
 
   async getCount(): Promise<number> {
