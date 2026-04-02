@@ -22,6 +22,8 @@ import { Drawer, DrawerContent, DrawerTrigger } from './ui/drawer';
 import { MoreVerticalIcon } from 'lucide-react';
 import { ButtonGroup } from './ui/button-group';
 import { Badge } from './ui/badge';
+import { usePixelInfo } from '@/hooks/usePixelInfo';
+import { PixelInfoPopover } from './PixelInfoPopover';
 
 const WS_API_URL = import.meta.env.VITE_API_WS_URL;
 
@@ -30,8 +32,18 @@ export const PixelBoard = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedColor, setSelectedColor] = useState(0);
   const [pendingPixel, setPendingPixel] = useState<Pixel | null>(null);
+  const [popupPos, setPopupPos] = useState<Pixel | null>(null);
   const coordsStore = useMemo(() => createCoordsStore(), []);
   const [onlineCount, setOnlineCount] = useState(0);
+
+  const {
+    pixelInfo,
+    isPending: isPixelInfoPending,
+    fetchPixelInfo,
+    clear,
+  } = usePixelInfo({
+    apiUrl: '/api/canvas',
+  });
 
   const {
     viewportRef,
@@ -116,10 +128,17 @@ export const PixelBoard = () => {
 
         if (x >= 0 && x < CANVAS_WIDTH && y >= 0 && y < CANVAS_HEIGHT) {
           setPendingPixel({ x, y });
+          fetchPixelInfo(x, y);
+
+          const { offsetX, offsetY, scale } = viewportRef.current;
+          setPopupPos({
+            x: offsetX + x * scale + scale,
+            y: offsetY + y * scale,
+          });
         }
       }
     },
-    [onMouseDown, toCanvasCoords],
+    [fetchPixelInfo, onMouseDown, toCanvasCoords, viewportRef],
   );
 
   const handleMouseMove = useCallback(
@@ -155,6 +174,11 @@ export const PixelBoard = () => {
 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleConfirm]);
+
+  const handlePixelPopoverClose = useCallback(() => {
+    setPopupPos(null);
+    clear();
+  }, [clear]);
 
   const getPlaceText = useCallback(() => {
     if (isPending) {
@@ -244,6 +268,16 @@ export const PixelBoard = () => {
           </ButtonGroup>
         )}
       </div>
+
+      <PixelInfoPopover
+        pixel={pendingPixel}
+        pos={popupPos}
+        pixelInfo={pixelInfo}
+        isLoading={isPixelInfoPending}
+        getPixelColor={getPixelColor}
+        onClose={handlePixelPopoverClose}
+        onPixelClear={() => setPendingPixel(null)}
+      />
 
       <div className="absolute top-2 left-2">
         <Badge
