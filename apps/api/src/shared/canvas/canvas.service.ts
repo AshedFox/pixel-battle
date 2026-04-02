@@ -1,4 +1,9 @@
-import { CANVAS_SIZE, CANVAS_WIDTH, PixelUpdateData } from '@repo/shared';
+import {
+  CANVAS_COLORS,
+  CANVAS_SIZE,
+  CANVAS_WIDTH,
+  PixelUpdateData,
+} from '@repo/shared';
 import Redis from 'ioredis';
 import { config } from '../../config';
 
@@ -6,6 +11,10 @@ const CANVAS_KEY = 'canvas:state';
 const COOLDOWN_KEY_PREFIX = 'canvas:users-cooldown';
 
 export class CanvasService {
+  private colorsBuffers = Array.from({ length: CANVAS_COLORS.length }, (_, i) =>
+    Buffer.from([i]),
+  );
+
   constructor(private readonly redis: Redis) {}
 
   async getFullState(): Promise<Buffer> {
@@ -32,7 +41,7 @@ export class CanvasService {
 
     for (const { x, y, color } of pixels) {
       const offset = y * CANVAS_WIDTH + x;
-      pipeline.setrange(CANVAS_KEY, offset, Buffer.from([color]));
+      pipeline.setrange(CANVAS_KEY, offset, this.colorsBuffers[color]);
     }
 
     await pipeline.exec();
