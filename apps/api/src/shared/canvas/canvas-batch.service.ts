@@ -1,13 +1,15 @@
+import { randomUUID } from 'crypto';
 import { config } from '../../config';
 import { NewDrawEvent } from '../../db/schema/draw-events';
 import Redis from 'ioredis';
 
-const EVENTS_KEY = 'canvas:draw_events';
-const PROCESSING_EVENTS_KEY = 'canvas:draw_events_processing';
+const STREAM_KEY = 'canvas:draw_events';
+const GROUP_NAME = 'canvas_workers';
+const CONSUMER_NAME = `worker:${randomUUID()}`;
+const PENDING_CLAIM_THRESHOLD_MS = 30_000;
 
 export class CanvasBatchService {
   private interval?: NodeJS.Timeout;
-  private isFlushing = false;
 
   constructor(
     private readonly redis: Redis,
@@ -15,53 +17,79 @@ export class CanvasBatchService {
   ) {}
 
   async add(event: NewDrawEvent) {
-    const length = await this.redis.rpush(EVENTS_KEY, JSON.stringify(event));
-
-    if (length >= config.CANVAS_FLUSH_THRESHOD) {
-      void this.flush();
-    }
+    await this.redis.xadd(STREAM_KEY, '*', 'data', JSON.stringify(event));
   }
 
   async recoverProcessing() {
-    const exists = await this.redis.exists(PROCESSING_EVENTS_KEY);
-    if (exists) {
-      await this.redis.rename(PROCESSING_EVENTS_KEY, EVENTS_KEY);
-    }
+    await this.claimPending();
+  }
+
+  private async claimPending(): Promise<void> {
+    await this.redis.xautoclaim(
+      STREAM_KEY,
+      GROUP_NAME,
+      CONSUMER_NAME,
+      PENDING_CLAIM_THRESHOLD_MS,
+      '0-0',
+    );
+  }
+
+  private parseMsgsToEvents(messages: [string, string[]][]): NewDrawEvent[] {
+    return messages.map(([, fields]) => {
+      const raw = JSON.parse(fields[1]);
+      return { ...raw, timestamp: new Date(raw.timestamp) };
+    });
   }
 
   async flush() {
-    if (this.isFlushing) {
+    await this.claimPending();
+
+    const results = await this.redis.xreadgroup(
+      'GROUP',
+      GROUP_NAME,
+      CONSUMER_NAME,
+      'COUNT',
+      String(config.CANVAS_FLUSH_THRESHOD),
+      'STREAMS',
+      STREAM_KEY,
+      '>',
+    );
+
+    if (!results || results.length === 0) {
       return;
     }
 
+    const [, messages] = results[0] as [string, [string, string[]][]];
+
+    if (messages.length === 0) {
+      return;
+    }
+
+    const ids = messages.map(([id]) => id);
+    const events = this.parseMsgsToEvents(messages);
+
     try {
-      this.isFlushing = true;
+      await this.onFlush(events);
+      await this.redis.xack(STREAM_KEY, GROUP_NAME, ...ids);
+    } catch {
+      console.error('Failed to process stream batch');
+    }
+  }
 
-      try {
-        await this.redis.rename(EVENTS_KEY, PROCESSING_EVENTS_KEY);
-      } catch {
-        return;
+  async ensureGroup(): Promise<void> {
+    try {
+      await this.redis.xgroup(
+        'CREATE',
+        STREAM_KEY,
+        GROUP_NAME,
+        '$',
+        'MKSTREAM',
+      );
+    } catch (err: unknown) {
+      if (!(err instanceof Error) || !err.message.includes('BUSYGROUP')) {
+        throw err;
       }
-
-      const items = await this.redis.lrange(PROCESSING_EVENTS_KEY, 0, -1);
-
-      const batch: NewDrawEvent[] = items.map((item) => {
-        const parsed = JSON.parse(item);
-        return {
-          ...parsed,
-          timestamp: new Date(parsed.timestamp),
-        };
-      });
-
-      try {
-        await this.onFlush(batch);
-        await this.redis.del(PROCESSING_EVENTS_KEY);
-      } catch {
-        console.error('Failed to process batched events');
-        await this.redis.rename(PROCESSING_EVENTS_KEY, EVENTS_KEY);
-      }
-    } finally {
-      this.isFlushing = false;
+      // Else group already exists - OK
     }
   }
 
