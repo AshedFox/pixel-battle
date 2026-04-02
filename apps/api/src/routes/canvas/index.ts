@@ -52,10 +52,12 @@ export const canvasRoutes: FastifyPluginAsync = async (fastify) => {
       );
 
       return reply.code(200).send({
-        ...pixelState,
         x: request.params.x,
         y: request.params.y,
-        timestamp: pixelState.timestamp.toISOString(),
+        color: pixelState?.color ?? null,
+        userId: pixelState?.userId ?? null,
+        userName: pixelState?.userName ?? null,
+        timestamp: pixelState ? pixelState.timestamp.toISOString() : null,
       });
     },
   );
