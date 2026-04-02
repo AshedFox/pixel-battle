@@ -38,6 +38,7 @@ export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
   fastify.addHook('onClose', async () => {
     await fastify.canvas.batchService.stop();
     await pubSub.unsubscribe();
+    await pixelUpdateBatchService.stop();
     onlineService.stopBroadcast();
   });
 
