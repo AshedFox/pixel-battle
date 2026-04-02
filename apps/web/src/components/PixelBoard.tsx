@@ -21,6 +21,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Drawer, DrawerContent, DrawerTrigger } from './ui/drawer';
 import { MoreVerticalIcon } from 'lucide-react';
 import { ButtonGroup } from './ui/button-group';
+import { Badge } from './ui/badge';
 
 const WS_API_URL = import.meta.env.VITE_API_WS_URL;
 
@@ -30,6 +31,7 @@ export const PixelBoard = () => {
   const [selectedColor, setSelectedColor] = useState(0);
   const [pendingPixel, setPendingPixel] = useState<Pixel | null>(null);
   const coordsStore = useMemo(() => createCoordsStore(), []);
+  const [onlineCount, setOnlineCount] = useState(0);
 
   const {
     viewportRef,
@@ -51,6 +53,7 @@ export const PixelBoard = () => {
     canvasRef,
     selectedColorIndex: selectedColor,
     viewportRef: viewportRef,
+    onOnlineChange: setOnlineCount,
   });
   const { isOnCooldown, remainingMs, startCooldown } = useCooldown({
     apiUrl: '/api/canvas/cooldown',
@@ -178,7 +181,7 @@ export const PixelBoard = () => {
   return (
     <div
       ref={containerRef}
-      className="relative overflow-hidden flex-1 bg-gray-100 @container flex flex-col"
+      className="relative overflow-hidden flex-1 bg-gray-100 @container"
     >
       <canvas
         ref={canvasRef}
@@ -197,23 +200,23 @@ export const PixelBoard = () => {
         )}
         style={{ imageRendering: 'pixelated' }}
       />
-      {isDesktop ? (
-        <div className="absolute bottom-8 left-8 flex flex-col gap-2 items-center">
-          <ColorPicker selected={selectedColor} onChange={setSelectedColor} />
-          <Field>
-            <Button
-              disabled={
-                isOnCooldown || !pendingPixel || isSameColor || isPending
-              }
-              size="lg"
-              onClick={handleConfirm}
-            >
-              {getPlaceText()}
-            </Button>
-          </Field>
-        </div>
-      ) : (
-        <div className="absolute bottom-0 w-full">
+      <div className="absolute bottom-0 md:bottom-8 md:left-8 flex flex-col gap-2 items-center w-full md:w-fit">
+        {isDesktop ? (
+          <>
+            <ColorPicker selected={selectedColor} onChange={setSelectedColor} />
+            <Field>
+              <Button
+                disabled={
+                  isOnCooldown || !pendingPixel || isSameColor || isPending
+                }
+                size="lg"
+                onClick={handleConfirm}
+              >
+                {getPlaceText()}
+              </Button>
+            </Field>
+          </>
+        ) : (
           <ButtonGroup className="w-full">
             <Button
               className="flex-1"
@@ -239,10 +242,19 @@ export const PixelBoard = () => {
               </DrawerContent>
             </Drawer>
           </ButtonGroup>
-        </div>
-      )}
+        )}
+      </div>
 
-      <div className="absolute top-8 left-[50%] -translate-[50%]">
+      <div className="absolute top-2 left-2">
+        <Badge
+          className="h-8 px-4 border-green-200 text-green-700 bg-green-100 font-semibold"
+          variant="secondary"
+        >
+          <div className="rounded-full bg-green-500 size-2" /> {onlineCount}{' '}
+          online
+        </Badge>
+      </div>
+      <div className="absolute top-2 left-[50%] -translate-x-[50%]">
         <CoordsBadge coordsStore={coordsStore} />
       </div>
     </div>
