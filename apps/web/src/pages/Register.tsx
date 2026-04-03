@@ -42,8 +42,12 @@ export const Register = () => {
         return;
       }
 
-      toast.success('Successfully registered');
-      await navigate('/', { replace: true });
+      toast.warning('Successfully registered', {
+        description:
+          'You need to verify your account. Please, check your email, we sent you confirmation link',
+        duration: 20_000,
+      });
+      await navigate('/login', { replace: true });
     },
   });
 

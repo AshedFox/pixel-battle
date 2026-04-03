@@ -5,7 +5,6 @@ import {
   LoginInput,
   LoginResponse,
   RegisterInput,
-  RegisterResponse,
 } from '@repo/shared';
 import {
   createContext,
@@ -27,7 +26,7 @@ type AuthContextType = {
   authData: AuthData;
   apiFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   login: (input: LoginInput) => Promise<RequestResult<LoginResponse>>;
-  register: (input: RegisterInput) => Promise<RequestResult<RegisterResponse>>;
+  register: (input: RegisterInput) => Promise<RequestResult<undefined>>;
   logout: () => Promise<void>;
 };
 
@@ -197,16 +196,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAuthData(null);
       return { error };
     }
-
-    setAuthData({
-      accessToken: data.accessToken,
-      expiresAt: new Date(data.expiresAt),
-    });
-
-    authChannel.postMessage({
-      type: 'TOKEN_REFRESHED',
-      ...data,
-    });
 
     return { data };
   };
