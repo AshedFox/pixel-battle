@@ -33,8 +33,6 @@ export const registerBodySchema = z
     path: ['passwordComparison'],
   });
 
-export const registerResponseSchema = authResponseSchema;
-
 export const refreshResponseSchema = authResponseSchema;
 
 export const accessTokenErrorSchema = errorSchema.extend({

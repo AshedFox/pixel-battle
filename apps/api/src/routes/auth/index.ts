@@ -4,13 +4,13 @@ import {
   loginResponseSchema,
   refreshResponseSchema,
   registerBodySchema,
-  registerResponseSchema,
 } from '@repo/shared';
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { config } from '../../config';
 import { AuthService } from './auth.service';
 import fastifyRateLimit from '@fastify/rate-limit';
 import z from 'zod';
+import { EmailConfirmationService } from '../../shared/email-confirmation/email-confirmation.service';
 
 const cookieOptions = (maxAgeMs: number) => ({
   httpOnly: true,
@@ -28,6 +28,10 @@ const publicCookieOptions = (maxAgeMs: number) => ({
 
 export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   const authService = new AuthService(fastify.db, fastify.jwt, fastify.redis);
+  const confirmationService = new EmailConfirmationService(
+    fastify.jwt,
+    fastify.db,
+  );
 
   fastify.register(fastifyRateLimit, {
     max: 10,
@@ -82,7 +86,7 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
     {
       schema: {
         body: registerBodySchema,
-        response: { 200: registerResponseSchema, 401: errorSchema },
+        response: { 204: z.void(), 401: errorSchema },
       },
     },
     async (request, reply) => {
@@ -96,24 +100,21 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
         return reply.code(401).send({ message: 'Failed to register' });
       }
 
-      const { accessToken, refreshToken, expiresAt } =
-        await authService.makeTokens({ id: user.id, status: user.status }, request.ip);
+      const confirmation = confirmationService.createConfirmationToken({
+        sub: user.id,
+      });
 
-      reply.setCookie(
-        config.REFRESH_COOKIE_NAME,
-        refreshToken,
-        cookieOptions(config.REFRESH_TOKEN_LIFETIME),
-      );
+      await fastify.mailer.sendMail({
+        template: 'welcome',
+        to: request.body.email,
+        data: {
+          username: request.body.name,
+          confirmUrl: `${config.CLIENT_URL}/confirm-email/${confirmation}`,
+          appName: config.APP_NAME,
+        },
+      });
 
-      reply.setCookie(
-        config.AUTH_HINT_COOKIE_NAME,
-        '1',
-        publicCookieOptions(config.REFRESH_TOKEN_LIFETIME),
-      );
-
-      return reply
-        .status(200)
-        .send({ accessToken, expiresAt: expiresAt.toISOString() });
+      return reply.status(204).send();
     },
   );
 

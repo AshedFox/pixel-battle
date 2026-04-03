@@ -112,6 +112,32 @@ export class AuthService {
   }
 
   async registerUser(email: string, password: string, name: string) {
+    const existing = await this.db
+      .select({
+        id: users.id,
+        status: users.status,
+        passwordHash: users.passwordHash,
+      })
+      .from(users)
+      .where(eq(users.email, email))
+      .then((r) => r[0] ?? null);
+
+    if (existing) {
+      if (existing.status === 'CONFIRMED') {
+        return null;
+      }
+
+      const passwordValid = await argon2
+        .verify(existing.passwordHash, password, argonOptions)
+        .catch(() => false);
+
+      if (!passwordValid) {
+        return null;
+      }
+
+      return { id: existing.id };
+    }
+
     return this.db
       .insert(users)
       .values({
@@ -119,8 +145,7 @@ export class AuthService {
         passwordHash: await argon2.hash(password, argonOptions),
         name,
       })
-      .onConflictDoNothing()
-      .returning({ id: users.id, status: users.status })
+      .returning({ id: users.id })
       .then((r) => r[0] ?? null);
   }
 

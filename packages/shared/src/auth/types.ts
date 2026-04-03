@@ -5,12 +5,10 @@ import {
   loginResponseSchema,
   refreshResponseSchema,
   registerBodySchema,
-  registerResponseSchema,
 } from './schemas';
 
 export type LoginInput = z.infer<typeof loginBodySchema>;
 export type RegisterInput = z.infer<typeof registerBodySchema>;
 export type LoginResponse = z.infer<typeof loginResponseSchema>;
-export type RegisterResponse = z.infer<typeof registerResponseSchema>;
 export type RefreshResponse = z.infer<typeof refreshResponseSchema>;
 export type AccessErrorResponse = z.infer<typeof accessTokenErrorSchema>;
