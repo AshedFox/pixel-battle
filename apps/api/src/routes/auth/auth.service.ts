@@ -306,6 +306,7 @@ export class AuthService {
       const user = await this.db
         .select({
           id: users.id,
+          role: users.role,
           status: users.status,
         })
         .from(users)
@@ -324,7 +325,7 @@ export class AuthService {
       }
 
       const tokens = await this.makeTokens(
-        { sub: user.id, status: user.status },
+        { sub: user.id, role: user.role, status: user.status },
         ip,
         tokenId,
       );
