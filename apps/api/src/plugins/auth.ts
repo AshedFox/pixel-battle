@@ -2,6 +2,8 @@ import { accessTokenErrorSchema } from '@repo/shared';
 import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 import z from 'zod';
+import { UserJwtPayload } from '../shared/auth/types';
+import { EmailConfirmationJwtPayload } from '../shared/email-confirmation/types';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -14,8 +16,8 @@ declare module 'fastify' {
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    payload: { sub: string };
-    user: { sub: string };
+    payload: UserJwtPayload | EmailConfirmationJwtPayload;
+    user: UserJwtPayload;
   }
 }
 
@@ -30,7 +32,14 @@ export const authPlugin: FastifyPluginAsync = fp(async (fastify) => {
     'authenticate',
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        await request.jwtVerify();
+        const payload = await request.jwtVerify<UserJwtPayload>();
+
+        if (payload.status !== 'CONFIRMED') {
+          reply.code(401).send({
+            message: 'Invalid status',
+            code: 'UNAUTHORIZED',
+          } satisfies AccessError);
+        }
       } catch (err: unknown) {
         if (
           isJwtError(err) &&
