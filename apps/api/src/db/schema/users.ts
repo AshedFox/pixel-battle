@@ -8,6 +8,10 @@ export const userStatusEnum = pgEnum('user_status', [
 
 export type UserStatus = (typeof userStatusEnum.enumValues)[number];
 
+export const userRoleEnum = pgEnum('user_role', ['USER', 'ADMIN']);
+
+export type UserRole = (typeof userRoleEnum.enumValues)[number];
+
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
   email: varchar('email', { length: 255 }).notNull().unique(),
@@ -16,6 +20,7 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').$onUpdate(() => new Date()),
   status: userStatusEnum('status').notNull().default('UNCONFIRMED'),
+  role: userRoleEnum('role').notNull().default('USER'),
 });
 
 export type User = typeof users.$inferSelect;

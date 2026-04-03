@@ -61,7 +61,7 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
       const { accessToken, refreshToken, expiresAt } =
         await authService.makeTokens(
-          { sub: user.id, status: user.status },
+          { sub: user.id, status: user.status, role: user.role },
           request.ip,
         );
 
