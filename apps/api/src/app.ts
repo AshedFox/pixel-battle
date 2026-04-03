@@ -11,6 +11,7 @@ import {
   ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import { authPlugin } from './plugins/auth';
+import { mailerPlugin } from './plugins/mailer';
 import { authRoutes } from './routes/auth';
 import { usersRoutes } from './routes/users';
 import { redisSubPlugin } from './plugins/redis-sub';
@@ -37,6 +38,7 @@ export function buildApp() {
   });
   app.register(dbPlugin);
   app.register(authPlugin);
+  app.register(mailerPlugin);
 
   app.register(fastifyRedis, {
     url: config.REDIS_URL,

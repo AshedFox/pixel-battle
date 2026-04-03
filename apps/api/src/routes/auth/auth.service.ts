@@ -7,6 +7,7 @@ import { config } from '../../config';
 import { randomBytes } from 'crypto';
 import { refreshTokens } from '../../db/schema/refresh-tokens';
 import Redis from 'ioredis';
+import { UserJwtPayload } from '../../shared/auth/types';
 
 const argonOptions: argon2.Options = {
   memoryCost: 2 ** 16,
@@ -27,14 +28,14 @@ export class AuthService {
   ) {}
 
   async makeTokens(
-    userId: string,
+    payload: UserJwtPayload,
     ip: string,
     replacedRefreshTokenId?: string,
   ) {
-    const accessToken = this.jwt.sign(
-      { sub: userId },
-      { algorithm: 'HS512', expiresIn: config.JWT_LIFETIME },
-    );
+    const accessToken = this.jwt.sign(payload, {
+      algorithm: 'HS512',
+      expiresIn: config.JWT_LIFETIME,
+    });
 
     const refreshTokenSecret = randomBytes(32).toString('base64url');
     const tokenHash = await argon2.hash(
@@ -47,7 +48,7 @@ export class AuthService {
       const tokens = await tx
         .select()
         .from(refreshTokens)
-        .where(eq(refreshTokens.userId, userId))
+        .where(eq(refreshTokens.userId, payload.sub))
         .orderBy(desc(refreshTokens.createdAt));
 
       if (tokens.length >= maxTokensPerUser) {
@@ -62,7 +63,7 @@ export class AuthService {
       const result = await tx
         .insert(refreshTokens)
         .values({
-          userId,
+          userId: payload.sub,
           tokenHash,
           expiresAt: new Date(Date.now() + config.REFRESH_TOKEN_LIFETIME),
           ip,
@@ -111,6 +112,32 @@ export class AuthService {
   }
 
   async registerUser(email: string, password: string, name: string) {
+    const existing = await this.db
+      .select({
+        id: users.id,
+        status: users.status,
+        passwordHash: users.passwordHash,
+      })
+      .from(users)
+      .where(eq(users.email, email))
+      .then((r) => r[0] ?? null);
+
+    if (existing) {
+      if (existing.status === 'CONFIRMED') {
+        return null;
+      }
+
+      const passwordValid = await argon2
+        .verify(existing.passwordHash, password, argonOptions)
+        .catch(() => false);
+
+      if (!passwordValid) {
+        return null;
+      }
+
+      return { id: existing.id };
+    }
+
     return this.db
       .insert(users)
       .values({
@@ -118,7 +145,6 @@ export class AuthService {
         passwordHash: await argon2.hash(password, argonOptions),
         name,
       })
-      .onConflictDoNothing()
       .returning({ id: users.id })
       .then((r) => r[0] ?? null);
   }
@@ -272,7 +298,21 @@ export class AuthService {
       }
 
       const verified = await this.verifyRefresh(refreshToken);
+
       if (!verified) {
+        return null;
+      }
+
+      const user = await this.db
+        .select({
+          id: users.id,
+          status: users.status,
+        })
+        .from(users)
+        .where(eq(users.id, verified.userId))
+        .then((r) => r[0] ?? null);
+
+      if (!user) {
         return null;
       }
 
@@ -283,7 +323,11 @@ export class AuthService {
           .where(eq(refreshTokens.id, verified.id));
       }
 
-      const tokens = await this.makeTokens(verified.userId, ip, tokenId);
+      const tokens = await this.makeTokens(
+        { sub: user.id, status: user.status },
+        ip,
+        tokenId,
+      );
 
       await this.redis.set(
         graceKey,

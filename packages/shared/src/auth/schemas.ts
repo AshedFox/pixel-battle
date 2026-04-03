@@ -33,10 +33,12 @@ export const registerBodySchema = z
     path: ['passwordComparison'],
   });
 
-export const registerResponseSchema = authResponseSchema;
-
 export const refreshResponseSchema = authResponseSchema;
 
 export const accessTokenErrorSchema = errorSchema.extend({
   code: z.enum(ACCESS_TOKEN_ERRORS),
+});
+
+export const confirmEmailParamsSchema = z.object({
+  token: z.jwt(),
 });
