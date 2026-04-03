@@ -1,4 +1,6 @@
 import {
+  ConfirmEmailParams,
+  confirmEmailParamsSchema,
   errorSchema,
   loginBodySchema,
   loginResponseSchema,
@@ -191,6 +193,29 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
       reply.clearCookie(config.AUTH_HINT_COOKIE_NAME, publicCookieOptions(-1));
 
       return reply.status(204).send();
+    },
+  );
+
+  fastify.post<{ Params: ConfirmEmailParams }>(
+    '/confirm-email/:token',
+    {
+      schema: {
+        params: confirmEmailParamsSchema,
+        response: { 400: errorSchema },
+      },
+    },
+    async (request, reply) => {
+      const success = await confirmationService.confirmEmail(
+        request.params.token,
+      );
+
+      if (!success) {
+        return reply
+          .code(400)
+          .send({ message: 'Expired or invalid confirmation' });
+      }
+
+      return reply.code(204).send();
     },
   );
 };
