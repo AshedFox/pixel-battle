@@ -3,7 +3,6 @@ import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 import z from 'zod';
 import { UserJwtPayload } from '../shared/auth/types';
-import { EmailConfirmationJwtPayload } from '../shared/email-confirmation/types';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -16,7 +15,7 @@ declare module 'fastify' {
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    payload: UserJwtPayload | EmailConfirmationJwtPayload;
+    payload: UserJwtPayload;
     user: UserJwtPayload;
   }
 }

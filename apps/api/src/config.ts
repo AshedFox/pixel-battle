@@ -9,6 +9,7 @@ const envSchema = z.object({
   REFRESH_COOKIE_NAME: z.string().default('X-REFRESH-TOKEN'),
   AUTH_HINT_COOKIE_NAME: z.string().default('is_auth'),
   EMAIL_CONFIRMATION_SECRET: z.string(),
+  EMAIL_CONFIRMATION_LIFETIME: z.coerce.number().min(1),
   REFRESH_TOKEN_SECRET: z.string(),
   REFRESH_TOKEN_LIFETIME: z.coerce.number().min(60000),
   PIXEL_COOLDOWN_MS: z.coerce.number().min(0),

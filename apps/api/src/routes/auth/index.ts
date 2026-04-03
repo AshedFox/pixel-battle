@@ -30,10 +30,7 @@ const publicCookieOptions = (maxAgeMs: number) => ({
 
 export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   const authService = new AuthService(fastify.db, fastify.jwt, fastify.redis);
-  const confirmationService = new EmailConfirmationService(
-    fastify.jwt,
-    fastify.db,
-  );
+  const confirmationService = new EmailConfirmationService(fastify.db);
 
   fastify.register(fastifyRateLimit, {
     max: 10,
@@ -102,16 +99,16 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
         return reply.code(401).send({ message: 'Failed to register' });
       }
 
-      const confirmation = confirmationService.createConfirmationToken({
-        sub: user.id,
-      });
+      const { token } = await confirmationService.createConfirmationToken(
+        user.id,
+      );
 
       await fastify.mailer.sendMail({
         template: 'welcome',
         to: request.body.email,
         data: {
           username: request.body.name,
-          confirmUrl: `${config.CLIENT_URL}/confirm-email/${confirmation}`,
+          confirmUrl: `${config.CLIENT_URL}/confirm-email/${token}`,
           appName: config.APP_NAME,
         },
       });
