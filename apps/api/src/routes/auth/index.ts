@@ -53,7 +53,7 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
         request.body.password,
       );
 
-      if (!user) {
+      if (!user || user.status === 'UNCONFIRMED') {
         return reply.code(401).send({ message: 'Failed to login' });
       }
 
