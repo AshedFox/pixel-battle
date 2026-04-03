@@ -95,3 +95,22 @@ export async function logout(): Promise<RequestResult<undefined>> {
     return { error: { message: 'Something went wrong' } };
   }
 }
+
+export async function confirmEmail(
+  token: string,
+): Promise<RequestResult<undefined>> {
+  try {
+    const res = await fetch(`/api/auth/confirm-email/${token}`, {
+      method: 'POST',
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      return { error: errorSchema.parse(data) };
+    }
+
+    return { data: undefined };
+  } catch {
+    return { error: { message: 'Something went wrong' } };
+  }
+}
