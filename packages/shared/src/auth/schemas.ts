@@ -40,5 +40,5 @@ export const accessTokenErrorSchema = errorSchema.extend({
 });
 
 export const confirmEmailParamsSchema = z.object({
-  token: z.jwt(),
+  token: z.string(),
 });
