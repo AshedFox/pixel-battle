@@ -16,12 +16,17 @@ const Login = lazy(() =>
 const Register = lazy(() =>
   import('./pages/Register').then((m) => ({ default: m.Register })),
 );
+const Confirm = lazy(() =>
+  import('./pages/Confirm').then((m) => ({ default: m.Confirm })),
+);
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
 
   return (
     <Routes>
+      <Route path="/confirm-email/:token" element={<Confirm />} />
+
       <Route element={<GuestRoute isAuthenticated={isAuthenticated} />}>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
