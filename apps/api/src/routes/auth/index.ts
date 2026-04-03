@@ -54,7 +54,10 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
       }
 
       const { accessToken, refreshToken, expiresAt } =
-        await authService.makeTokens(user.id, request.ip);
+        await authService.makeTokens(
+          { sub: user.id, status: user.status },
+          request.ip,
+        );
 
       reply.setCookie(
         config.REFRESH_COOKIE_NAME,
@@ -94,7 +97,7 @@ export const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
       }
 
       const { accessToken, refreshToken, expiresAt } =
-        await authService.makeTokens(user.id, request.ip);
+        await authService.makeTokens({ id: user.id, status: user.status }, request.ip);
 
       reply.setCookie(
         config.REFRESH_COOKIE_NAME,
