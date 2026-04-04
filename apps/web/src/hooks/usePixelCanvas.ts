@@ -15,6 +15,7 @@ import { Pixel } from '@/types/pixel';
 type Props = {
   wsUrl: string;
   apiUrl: string;
+  initialData: Uint8Array;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   viewportRef: React.RefObject<Viewport>;
   selectedColorIndex: number;
@@ -25,6 +26,7 @@ type Props = {
 export const usePixelCanvas = ({
   wsUrl,
   apiUrl,
+  initialData,
   canvasRef,
   selectedColorIndex,
   viewportRef,
@@ -126,8 +128,10 @@ export const usePixelCanvas = ({
   });
 
   useEffect(() => {
-    void syncCanvas();
-  }, [syncCanvas]);
+    pixelDataRef.current = initialData;
+    rebuildImageData(initialData);
+    scheduleRedraw();
+  }, [initialData, rebuildImageData, scheduleRedraw, pixelDataRef]);
 
   const placePixel = useCallback(
     (x: number, y: number) => {

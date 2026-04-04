@@ -1,4 +1,6 @@
 import {
+  Suspense,
+  use,
   useCallback,
   useEffect,
   useMemo,
@@ -24,10 +26,45 @@ import { ButtonGroup } from './ui/button-group';
 import { Badge } from './ui/badge';
 import { usePixelInfo } from '@/hooks/usePixelInfo';
 import { PixelInfoPopover } from './PixelInfoPopover';
+import { Spinner } from './ui/spinner';
+import { useAuth } from '@/components/AuthProvider';
 
 const WS_API_URL = import.meta.env.VITE_API_WS_URL;
+const CANVAS_API_URL = '/api/canvas';
+
+const CanvasLoadingFallback = () => (
+  <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+    <div className="flex flex-col items-center gap-3">
+      <Spinner className="size-10 text-gray-400" />
+      <span className="text-sm text-gray-500 font-medium">Loading canvas…</span>
+    </div>
+  </div>
+);
 
 export const PixelBoard = () => {
+  const { apiFetch } = useAuth();
+
+  const canvasPromise = useMemo(async () => {
+    const res = await apiFetch(CANVAS_API_URL);
+    const buffer = await res.arrayBuffer();
+    return new Uint8Array(buffer);
+  }, [apiFetch]);
+
+  return (
+    <div className="relative overflow-hidden flex-1 bg-gray-100">
+      <Suspense fallback={<CanvasLoadingFallback />}>
+        <PixelBoardContent canvasPromise={canvasPromise} />
+      </Suspense>
+    </div>
+  );
+};
+
+const PixelBoardContent = ({
+  canvasPromise,
+}: {
+  canvasPromise: Promise<Uint8Array>;
+}) => {
+  const initialData = use(canvasPromise);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedColor, setSelectedColor] = useState(0);
@@ -60,7 +97,8 @@ export const PixelBoard = () => {
 
   const { placePixel, scheduleRedraw, getPixelColor } = usePixelCanvas({
     wsUrl: `${WS_API_URL}/api/canvas/ws`,
-    apiUrl: '/api/canvas',
+    apiUrl: CANVAS_API_URL,
+    initialData,
     pendingPixel,
     canvasRef,
     selectedColorIndex: selectedColor,
@@ -207,10 +245,7 @@ export const PixelBoard = () => {
   const isDesktop = useMediaQuery('(min-width: 768px)', { defaultValue: true });
 
   return (
-    <div
-      ref={containerRef}
-      className="relative overflow-hidden flex-1 bg-gray-100 @container"
-    >
+    <div ref={containerRef} className="absolute inset-0 @container">
       <canvas
         ref={canvasRef}
         onWheel={onWheel}
