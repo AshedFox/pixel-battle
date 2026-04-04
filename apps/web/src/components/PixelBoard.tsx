@@ -126,6 +126,10 @@ export const PixelBoard = () => {
         const rect = e.currentTarget.getBoundingClientRect();
         const { x, y } = toCanvasCoords(e.clientX, e.clientY, rect);
 
+        if (pendingPixel && x === pendingPixel.x && y === pendingPixel.y) {
+          return;
+        }
+
         if (x >= 0 && x < CANVAS_WIDTH && y >= 0 && y < CANVAS_HEIGHT) {
           setPendingPixel({ x, y });
           fetchPixelInfo(x, y);
@@ -138,7 +142,7 @@ export const PixelBoard = () => {
         }
       }
     },
-    [fetchPixelInfo, onMouseDown, toCanvasCoords, viewportRef],
+    [fetchPixelInfo, onMouseDown, pendingPixel, toCanvasCoords, viewportRef],
   );
 
   const handleMouseMove = useCallback(
