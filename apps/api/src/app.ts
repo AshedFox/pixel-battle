@@ -19,6 +19,7 @@ import { canvasPlugin } from './plugins/canvas';
 import { canvasRoutes } from './routes/canvas';
 import { canvasWsRoute } from './routes/canvas/ws';
 import { healthRoutes } from './routes/health';
+import { roleGuardPlugin } from './plugins/role-guard';
 
 export function buildApp() {
   const app = Fastify({
@@ -38,6 +39,7 @@ export function buildApp() {
   });
   app.register(dbPlugin);
   app.register(authPlugin);
+  app.register(roleGuardPlugin);
   app.register(mailerPlugin);
 
   app.register(fastifyRedis, {
