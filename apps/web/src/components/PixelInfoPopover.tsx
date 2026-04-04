@@ -43,7 +43,12 @@ export const PixelInfoPopover = ({
             style={{ left: pos.x, top: pos.y }}
           />
         </PopoverAnchor>
-        <PopoverContent className="w-52" align="start" side="right">
+        <PopoverContent
+          className="w-52"
+          align="start"
+          side="right"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
               <div
