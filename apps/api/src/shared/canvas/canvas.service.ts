@@ -100,9 +100,10 @@ export class CanvasService {
           .then((r) => r[0] ?? null);
   }
 
-  async saveSnapshot(data: Buffer): Promise<void> {
+  async saveSnapshot(data: Buffer, timestamp?: Date): Promise<void> {
     await this.db.insert(canvasSnapshots).values({
       data,
+      timestamp: timestamp ?? new Date(),
     });
   }
 
