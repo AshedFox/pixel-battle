@@ -76,6 +76,12 @@ export class CanvasService {
     return canvas;
   }
 
+  async saveSnapshot(data: Buffer): Promise<void> {
+    await this.db.insert(canvasSnapshots).values({
+      data,
+    });
+  }
+
   async setPixel(x: number, y: number, color: number): Promise<void> {
     const offset = y * CANVAS_WIDTH + x;
     await this.redis.setrange(CANVAS_KEY, offset, Buffer.from([color]));
