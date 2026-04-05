@@ -23,7 +23,7 @@ const envSchema = z.object({
   WS_BROADCAST_CHUNK: z.coerce.number().default(100),
   ONLINE_HEARTBEAT_INTERVAL: z.coerce.number().default(30000),
   PIXEL_UPDATE_BUFFER_MAX: z.coerce.number().default(20000),
-  CANVAS_SNAPSHOT_CRON: z.string().default('0 * * * *'),
+  CANVAS_SNAPSHOT_THRESHOLD: z.coerce.number().default(100_000),
   MAIL_HOST: z.string(),
   MAIL_PORT: z.coerce.number().default(465),
   MAIL_SECURE: z
