@@ -34,7 +34,7 @@ export const authPlugin: FastifyPluginAsync = fp(async (fastify) => {
         const payload = await request.jwtVerify<UserJwtPayload>();
 
         if (payload.status !== 'CONFIRMED') {
-          reply.code(401).send({
+          return reply.code(401).send({
             message: 'Invalid status',
             code: 'UNAUTHORIZED',
           } satisfies AccessError);
