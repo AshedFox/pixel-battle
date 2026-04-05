@@ -16,7 +16,7 @@ declare module 'fastify' {
 export const canvasPlugin: FastifyPluginAsync = fp(async (fastify) => {
   const pixelHistory = new PixelHistoryService(fastify.db);
 
-  const canvasService = new CanvasService(fastify.redis);
+  const canvasService = new CanvasService(fastify.redis, fastify.db);
   const canvasBatchService = new CanvasBatchService(fastify.redis, (events) =>
     pixelHistory.saveBatch(events),
   );
