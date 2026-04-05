@@ -156,4 +156,9 @@ export class CanvasService {
 
     return true;
   }
+
+  async syncWithDb(): Promise<void> {
+    const buffer = await this.getFullStateAt(new Date());
+    await this.redis.set(CANVAS_KEY, buffer);
+  }
 }
