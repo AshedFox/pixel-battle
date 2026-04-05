@@ -33,13 +33,32 @@ export const canvasPlugin: FastifyPluginAsync = fp(async (fastify) => {
   await canvasBatchService.recoverProcessing();
   canvasBatchService.start();
 
-  const cronTask = cron.schedule(config.CANVAS_SNAPSHOT_CRON, async () => {
+  const cronTask = cron.schedule('* * * * *', async () => {
+    const lockKey = 'lock:canvas:snapshot';
+    const acquired = await fastify.redis.set(lockKey, 'true', 'EX', 60, 'NX');
+
+    if (!acquired) {
+      return;
+    }
+
     try {
+      const snapshot = await canvasService.getLastSnapshot();
+      const lastTimestamp = snapshot?.timestamp ?? new Date(0);
+      const { count: eventsCount } =
+        await canvasService.getEventsCountSince(lastTimestamp);
+
+      if (eventsCount < config.CANVAS_SNAPSHOT_THRESHOLD) {
+        return;
+      }
+
       const state = await canvasService.getFullState();
       await canvasService.saveSnapshot(state);
-      fastify.log.info('Canvas snapshot saved successfully');
+
+      fastify.log.info({ eventsCount }, 'Canvas snapshot saved successfully');
     } catch (err) {
       fastify.log.error(err, 'Failed to save canvas snapshot');
+    } finally {
+      await fastify.redis.del(lockKey);
     }
   });
 
