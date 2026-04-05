@@ -44,7 +44,7 @@ export class CanvasBatchService {
   async flush() {
     await this.claimPending();
 
-    const results = await this.redis.xreadgroup(
+    let results = await this.redis.xreadgroup(
       'GROUP',
       GROUP_NAME,
       CONSUMER_NAME,
@@ -52,14 +52,28 @@ export class CanvasBatchService {
       String(config.CANVAS_FLUSH_THRESHOD),
       'STREAMS',
       STREAM_KEY,
-      '>',
+      '0',
     );
 
-    if (!results || results.length === 0) {
-      return;
+    let [, messages] = (results?.[0] || ['', []]) as [
+      string,
+      [string, string[]][],
+    ];
+
+    if (messages.length === 0) {
+      results = await this.redis.xreadgroup(
+        'GROUP',
+        GROUP_NAME,
+        CONSUMER_NAME,
+        'COUNT',
+        String(config.CANVAS_FLUSH_THRESHOD),
+        'STREAMS',
+        STREAM_KEY,
+        '>',
+      );
     }
 
-    const [, messages] = results[0] as [string, [string, string[]][]];
+    [, messages] = (results?.[0] || ['', []]) as [string, [string, string[]][]];
 
     if (messages.length === 0) {
       return;
