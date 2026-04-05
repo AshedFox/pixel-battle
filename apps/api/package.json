@@ -10,6 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
+    "canvas:sync": "tsx scripts/sync-canvas.ts",
     "canvas:backfill-snapshots": "tsx ./scripts/backfill-snapshots.ts"
   },
   "dependencies": {
