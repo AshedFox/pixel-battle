@@ -9,7 +9,7 @@ import { config } from '../../config';
 import { Database } from '../../db';
 import { drawEvents } from '../../db/schema/draw-events';
 import { canvasSnapshots } from '../../db/schema/canvas-snapshots';
-import { and, asc, desc, gt, lte } from 'drizzle-orm';
+import { and, asc, count, desc, gt, lte } from 'drizzle-orm';
 import { streamQuery } from '../pg/stream';
 
 const CANVAS_KEY = 'canvas:state';
@@ -36,13 +36,7 @@ export class CanvasService {
   }
 
   async getFullStateAt(date: Date) {
-    const snapshot = await this.db
-      .select()
-      .from(canvasSnapshots)
-      .where(lte(canvasSnapshots.timestamp, date))
-      .orderBy(desc(canvasSnapshots.timestamp))
-      .limit(1)
-      .then((r) => r[0] ?? null);
+    const snapshot = await this.getLastSnapshot(date);
 
     const canvas = snapshot?.data
       ? Buffer.from(snapshot.data)
@@ -74,6 +68,36 @@ export class CanvasService {
     }
 
     return canvas;
+  }
+
+  async getEventsCountSince(timestamp?: Date) {
+    return timestamp
+      ? this.db
+          .select({ count: count() })
+          .from(drawEvents)
+          .where(gt(drawEvents.timestamp, timestamp))
+          .then((r) => r[0])
+      : this.db
+          .select({ count: count() })
+          .from(drawEvents)
+          .then((r) => r[0]);
+  }
+
+  async getLastSnapshot(timestamp?: Date) {
+    return timestamp
+      ? this.db
+          .select()
+          .from(canvasSnapshots)
+          .where(lte(canvasSnapshots.timestamp, timestamp))
+          .orderBy(desc(canvasSnapshots.timestamp))
+          .limit(1)
+          .then((r) => r[0] ?? null)
+      : this.db
+          .select()
+          .from(canvasSnapshots)
+          .orderBy(desc(canvasSnapshots.timestamp))
+          .limit(1)
+          .then((r) => r[0] ?? null);
   }
 
   async saveSnapshot(data: Buffer): Promise<void> {
