@@ -9,7 +9,7 @@ import { config } from '../../config';
 import { Database } from '../../db';
 import { drawEvents } from '../../db/schema/draw-events';
 import { canvasSnapshots } from '../../db/schema/canvas-snapshots';
-import { and, asc, count, desc, gt, lte } from 'drizzle-orm';
+import { and, asc, count, desc, gte, lte } from 'drizzle-orm';
 import { streamQuery } from '../pg/stream';
 
 const CANVAS_KEY = 'canvas:state';
@@ -53,7 +53,7 @@ export class CanvasService {
       .from(drawEvents)
       .where(
         and(
-          gt(drawEvents.timestamp, startDate),
+          gte(drawEvents.timestamp, startDate),
           lte(drawEvents.timestamp, date),
         ),
       )
@@ -75,7 +75,7 @@ export class CanvasService {
       ? this.db
           .select({ count: count() })
           .from(drawEvents)
-          .where(gt(drawEvents.timestamp, timestamp))
+          .where(gte(drawEvents.timestamp, timestamp))
           .then((r) => r[0])
       : this.db
           .select({ count: count() })
