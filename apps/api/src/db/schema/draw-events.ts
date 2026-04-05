@@ -22,7 +22,8 @@ export const drawEvents = pgTable(
   },
   (table) => [
     index('idx_user_id_timestamp').on(table.userId, table.timestamp),
-    index('idx_x_y').on(table.x, table.y),
+    index('idx_x_y_timestamp').on(table.x, table.y, table.timestamp),
+    index('idx_timestamp').on(table.timestamp),
   ],
 );
 

@@ -43,3 +43,7 @@ export const pixelInfoResponseSchema = z.object({
   userId: z.string().nullable(),
   userName: z.string().nullable(),
 });
+
+export const canvasSnapshotParamsSchema = z.object({
+  timestamp: z.iso.datetime(),
+});

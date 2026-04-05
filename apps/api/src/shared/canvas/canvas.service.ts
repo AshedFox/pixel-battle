@@ -6,6 +6,11 @@ import {
 } from '@repo/shared';
 import Redis from 'ioredis';
 import { config } from '../../config';
+import { Database } from '../../db';
+import { drawEvents } from '../../db/schema/draw-events';
+import { canvasSnapshots } from '../../db/schema/canvas-snapshots';
+import { and, asc, desc, gt, lte } from 'drizzle-orm';
+import { streamQuery } from '../pg/stream';
 
 const CANVAS_KEY = 'canvas:state';
 const COOLDOWN_KEY_PREFIX = 'canvas:users-cooldown';
@@ -15,7 +20,10 @@ export class CanvasService {
     Buffer.from([i]),
   );
 
-  constructor(private readonly redis: Redis) {}
+  constructor(
+    private readonly redis: Redis,
+    private readonly db: Database['db'],
+  ) {}
 
   async getFullState(): Promise<Buffer> {
     const buffer = await this.redis.getBuffer(CANVAS_KEY);
@@ -25,6 +33,53 @@ export class CanvasService {
     }
 
     return buffer;
+  }
+
+  async getFullStateAt(date: Date) {
+    const snapshot = await this.db
+      .select()
+      .from(canvasSnapshots)
+      .where(lte(canvasSnapshots.timestamp, date))
+      .orderBy(desc(canvasSnapshots.timestamp))
+      .limit(1)
+      .then((r) => r[0] ?? null);
+
+    const canvas = snapshot?.data
+      ? Buffer.from(snapshot.data)
+      : Buffer.alloc(CANVAS_SIZE);
+
+    const startDate = snapshot ? snapshot.timestamp : new Date(0);
+
+    const query = this.db
+      .select({
+        x: drawEvents.x,
+        y: drawEvents.y,
+        color: drawEvents.color,
+      })
+      .from(drawEvents)
+      .where(
+        and(
+          gt(drawEvents.timestamp, startDate),
+          lte(drawEvents.timestamp, date),
+        ),
+      )
+      .orderBy(asc(drawEvents.timestamp))
+      .toSQL();
+
+    for await (const { x, y, color } of streamQuery<PixelUpdateData>(
+      this.db.$client,
+      query,
+    )) {
+      canvas[y * CANVAS_WIDTH + x] = color;
+    }
+
+    return canvas;
+  }
+
+  async saveSnapshot(data: Buffer): Promise<void> {
+    await this.db.insert(canvasSnapshots).values({
+      data,
+    });
   }
 
   async setPixel(x: number, y: number, color: number): Promise<void> {
