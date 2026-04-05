@@ -10,6 +10,7 @@ import { WSBroadcastService } from '../../shared/ws/ws-broadcast.service';
 import { CanvasOnlineService } from '../../shared/canvas/canvas-online.service';
 import { randomUUID } from 'crypto';
 import { CanvasSeqService } from '../../shared/canvas/canvas-seq.service';
+import { UserJwtPayload } from '../../shared/auth/types';
 
 export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
   const pubSub = new PubSubService(
@@ -53,7 +54,12 @@ export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
 
     let userId: string;
     try {
-      const decoded = fastify.jwt.verify<{ sub: string }>(token);
+      const decoded = fastify.jwt.verify<UserJwtPayload>(token);
+      if (decoded.status !== 'CONFIRMED') {
+        sendError(socket, 'Invalid or expired token');
+        socket.close(4001, 'Unauthorized');
+        return;
+      }
       userId = decoded.sub;
     } catch {
       sendError(socket, 'Invalid or expired token');
