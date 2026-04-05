@@ -1,5 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import {
+  CanvasSnapshotParams,
+  canvasSnapshotParamsSchema,
   cooldownResponseSchema,
   PixelInfoParams,
   pixelInfoParamsSchema,
@@ -59,6 +61,24 @@ export const canvasRoutes: FastifyPluginAsync = async (fastify) => {
         userName: pixelState?.userName ?? null,
         timestamp: pixelState ? pixelState.timestamp.toISOString() : null,
       });
+    },
+  );
+
+  fastify.get<{ Params: CanvasSnapshotParams }>(
+    '/snapshot/:timestamp',
+    {
+      preHandler: [fastify.authenticate, fastify.roleGuard('ADMIN')],
+      schema: { params: canvasSnapshotParamsSchema },
+    },
+    async (request, reply) => {
+      const state = await fastify.canvas.service.getFullStateAt(
+        new Date(request.params.timestamp),
+      );
+
+      return reply
+        .code(200)
+        .header('Content-Type', 'application/octet-stream')
+        .send(state);
     },
   );
 };
