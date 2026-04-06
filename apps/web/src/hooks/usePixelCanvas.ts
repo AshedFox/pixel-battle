@@ -11,10 +11,9 @@ import {
 } from '@repo/shared';
 import { useAuth } from '@/components/AuthProvider';
 import { Pixel } from '@/types/pixel';
+import { apiFetch } from '@/lib/api-client';
 
 type Props = {
-  wsUrl: string;
-  apiUrl: string;
   initialData: Uint8Array;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   viewportRef: React.RefObject<Viewport>;
@@ -23,9 +22,9 @@ type Props = {
   onOnlineChange?: (newCount: number) => void;
 };
 
+const WS_API_URL = import.meta.env.VITE_API_WS_URL;
+
 export const usePixelCanvas = ({
-  wsUrl,
-  apiUrl,
   initialData,
   canvasRef,
   selectedColorIndex,
@@ -49,7 +48,7 @@ export const usePixelCanvas = ({
       selectedColorRef,
     });
 
-  const { apiFetch, authData } = useAuth();
+  const { authData } = useAuth();
 
   const lastSeqRef = useRef(0);
   const lastSyncRef = useRef(0);
@@ -63,14 +62,14 @@ export const usePixelCanvas = ({
 
     lastSyncRef.current = now;
 
-    const res = await apiFetch(apiUrl);
+    const res = await apiFetch('/api/canvas');
     const buf = await res.arrayBuffer();
     const data = new Uint8Array(buf);
 
     pixelDataRef.current = data;
     rebuildImageData(data);
     scheduleRedraw();
-  }, [apiFetch, apiUrl, pixelDataRef, rebuildImageData, scheduleRedraw]);
+  }, [pixelDataRef, rebuildImageData, scheduleRedraw]);
 
   const handleWsMessage = useCallback(
     (msg: unknown) => {
@@ -122,7 +121,7 @@ export const usePixelCanvas = ({
   );
 
   const { send } = useWebSocket({
-    url: wsUrl,
+    url: `${WS_API_URL}/api/canvas/ws`,
     onMessage: handleWsMessage,
     token: authData?.accessToken ?? null,
   });
