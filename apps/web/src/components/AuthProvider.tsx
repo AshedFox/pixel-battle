@@ -1,4 +1,5 @@
 import { login, logout, refresh, register } from '@/services/auth.service';
+import { parseJwtPayload } from '@/lib/jwt';
 import { RequestResult } from '@/types/request';
 import { LoginInput, LoginResponse, RegisterInput } from '@repo/shared';
 import {
@@ -12,14 +13,18 @@ import {
 } from 'react';
 import { configureApiClient } from '@/lib/api-client';
 
+type UserRole = 'USER' | 'ADMIN';
+
 type AuthData = {
   accessToken: string;
   expiresAt: Date;
+  role: UserRole;
 } | null;
 
 type AuthContextType = {
   isAuthenticated: boolean;
   authData: AuthData;
+  role: UserRole | null;
   login: (input: LoginInput) => Promise<RequestResult<LoginResponse>>;
   register: (input: RegisterInput) => Promise<RequestResult<undefined>>;
   logout: () => Promise<void>;
@@ -46,14 +51,23 @@ const authChannel = new BroadcastChannel('auth');
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const initialAuthState = use(initialAuthPromise);
 
-  const [authData, setAuthData] = useState<AuthData>(
-    initialAuthState
-      ? {
-          accessToken: initialAuthState.accessToken,
-          expiresAt: new Date(initialAuthState.expiresAt),
-        }
-      : null,
-  );
+  const [authData, setAuthData] = useState<AuthData>(() => {
+    if (!initialAuthState) {
+      return null;
+    }
+
+    const payload = parseJwtPayload(initialAuthState.accessToken);
+
+    if (!payload) {
+      return null;
+    }
+
+    return {
+      accessToken: initialAuthState.accessToken,
+      expiresAt: new Date(initialAuthState.expiresAt),
+      role: payload.role as UserRole,
+    };
+  });
   const authDataRef = useRef(authData);
 
   useEffect(() => {
@@ -63,12 +77,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       switch (e.data.type) {
-        case 'TOKEN_REFRESHED':
-          setAuthData({
-            accessToken: e.data.accessToken,
-            expiresAt: new Date(e.data.expiresAt),
-          });
+        case 'TOKEN_REFRESHED': {
+          const payload = parseJwtPayload(e.data.accessToken);
+          if (payload) {
+            setAuthData({
+              accessToken: e.data.accessToken,
+              expiresAt: new Date(e.data.expiresAt),
+              role: payload.role as UserRole,
+            });
+          }
           break;
+        }
         case 'LOGOUT':
           setAuthData(null);
           break;
@@ -94,13 +113,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
       setAuthData(null);
       authChannel.postMessage({ type: 'LOGOUT' });
-
       return { error };
+    }
+
+    const payload = parseJwtPayload(data.accessToken);
+
+    if (!payload) {
+      setAuthData(null);
+      authChannel.postMessage({ type: 'LOGOUT' });
+      return { error: new Error('Invalid token payload') };
     }
 
     setAuthData({
       accessToken: data.accessToken,
       expiresAt: new Date(data.expiresAt),
+      role: payload.role as UserRole,
     });
 
     authChannel.postMessage({
@@ -146,9 +173,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { error };
     }
 
+    const payload = parseJwtPayload(data.accessToken);
+    if (!payload) {
+      return { error: new Error('Invalid token payload') };
+    }
+
     setAuthData({
       accessToken: data.accessToken,
       expiresAt: new Date(data.expiresAt),
+      role: payload.role as UserRole,
     });
 
     authChannel.postMessage({
@@ -181,6 +214,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         isAuthenticated: !!authData,
         authData,
+        role: authData?.role ?? null,
         login: handleLogin,
         register: handleRegister,
         logout: handleLogout,
