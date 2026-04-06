@@ -1,11 +1,6 @@
 import { login, logout, refresh, register } from '@/services/auth.service';
 import { RequestResult } from '@/types/request';
-import {
-  accessTokenErrorSchema,
-  LoginInput,
-  LoginResponse,
-  RegisterInput,
-} from '@repo/shared';
+import { LoginInput, LoginResponse, RegisterInput } from '@repo/shared';
 import {
   createContext,
   ReactNode,
@@ -15,6 +10,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { configureApiClient } from '@/lib/api-client';
 
 type AuthData = {
   accessToken: string;
@@ -24,7 +20,6 @@ type AuthData = {
 type AuthContextType = {
   isAuthenticated: boolean;
   authData: AuthData;
-  apiFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
   login: (input: LoginInput) => Promise<RequestResult<LoginResponse>>;
   register: (input: RegisterInput) => Promise<RequestResult<undefined>>;
   logout: () => Promise<void>;
@@ -117,6 +112,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    configureApiClient({
+      accessToken: authData?.accessToken ?? null,
+      onRefresh: handleRefresh,
+    });
+  }, [authData?.accessToken, handleRefresh]);
+
+  useEffect(() => {
     if (!authData) {
       return;
     }
@@ -135,38 +137,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => clearTimeout(timerId);
   }, [authData, handleRefresh]);
-
-  const apiFetch = useCallback(
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      const doRequest = (token?: string) =>
-        fetch(input, {
-          ...init,
-          headers: {
-            ...init?.headers,
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-
-      let res = await doRequest(authDataRef.current?.accessToken);
-
-      if (res.status === 401) {
-        const { code } = accessTokenErrorSchema.parse(await res.json());
-
-        if (code === 'ACCESS_TOKEN_EXPIRED') {
-          const { data, error } = await handleRefresh();
-
-          if (error) {
-            return res;
-          }
-
-          res = await doRequest(data.accessToken);
-        }
-      }
-
-      return res;
-    },
-    [handleRefresh],
-  );
 
   const handleLogin = async (input: LoginInput) => {
     const { data, error } = await login(input);
@@ -211,7 +181,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         isAuthenticated: !!authData,
         authData,
-        apiFetch,
         login: handleLogin,
         register: handleRegister,
         logout: handleLogout,

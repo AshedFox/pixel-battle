@@ -27,10 +27,7 @@ import { Badge } from './ui/badge';
 import { usePixelInfo } from '@/hooks/usePixelInfo';
 import { PixelInfoPopover } from './PixelInfoPopover';
 import { Spinner } from './ui/spinner';
-import { useAuth } from '@/components/AuthProvider';
-
-const WS_API_URL = import.meta.env.VITE_API_WS_URL;
-const CANVAS_API_URL = '/api/canvas';
+import { apiFetch } from '@/lib/api-client';
 
 const CanvasLoadingFallback = () => (
   <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
@@ -42,13 +39,11 @@ const CanvasLoadingFallback = () => (
 );
 
 export const PixelBoard = () => {
-  const { apiFetch } = useAuth();
-
   const canvasPromise = useMemo(async () => {
-    const res = await apiFetch(CANVAS_API_URL);
+    const res = await apiFetch('/api/canvas');
     const buffer = await res.arrayBuffer();
     return new Uint8Array(buffer);
-  }, [apiFetch]);
+  }, []);
 
   return (
     <div className="relative overflow-hidden flex-1 bg-gray-100">
@@ -78,9 +73,7 @@ const PixelBoardContent = ({
     isPending: isPixelInfoPending,
     fetchPixelInfo,
     clear,
-  } = usePixelInfo({
-    apiUrl: '/api/canvas',
-  });
+  } = usePixelInfo();
 
   const {
     viewportRef,
@@ -96,8 +89,6 @@ const PixelBoardContent = ({
   } = useViewport();
 
   const { placePixel, scheduleRedraw, getPixelColor } = usePixelCanvas({
-    wsUrl: `${WS_API_URL}/api/canvas/ws`,
-    apiUrl: CANVAS_API_URL,
     initialData,
     pendingPixel,
     canvasRef,
@@ -105,9 +96,7 @@ const PixelBoardContent = ({
     viewportRef: viewportRef,
     onOnlineChange: setOnlineCount,
   });
-  const { isOnCooldown, remainingMs, startCooldown } = useCooldown({
-    apiUrl: '/api/canvas/cooldown',
-  });
+  const { isOnCooldown, remainingMs, startCooldown } = useCooldown();
   const [isPending, startTransition] = useTransition();
 
   const isSameColor =
