@@ -88,6 +88,9 @@ const PixelBoardContent = ({
     onTouchStart,
   } = useViewport();
 
+  const { isOnCooldown, remainingMs, setCooldown, startOptimisticCooldown } =
+    useCooldown();
+
   const { placePixel, scheduleRedraw, getPixelColor } = usePixelCanvas({
     initialData,
     pendingPixel,
@@ -95,8 +98,8 @@ const PixelBoardContent = ({
     selectedColorIndex: selectedColor,
     viewportRef: viewportRef,
     onOnlineChange: setOnlineCount,
+    onCooldownUpdate: setCooldown,
   });
-  const { isOnCooldown, remainingMs, startCooldown } = useCooldown();
   const [isPending, startTransition] = useTransition();
 
   const isSameColor =
@@ -136,11 +139,17 @@ const PixelBoardContent = ({
       return;
     }
     startTransition(async () => {
+      startOptimisticCooldown();
       placePixel(pendingPixel.x, pendingPixel.y);
-      await startCooldown();
       setPendingPixel(null);
     });
-  }, [pendingPixel, isOnCooldown, isSameColor, placePixel, startCooldown]);
+  }, [
+    pendingPixel,
+    isOnCooldown,
+    isSameColor,
+    placePixel,
+    startOptimisticCooldown,
+  ]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
