@@ -185,8 +185,10 @@ const PixelBoardContent = ({
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       onMouseMove(e);
 
-      const rect = e.currentTarget.getBoundingClientRect();
-      const { x, y } = toCanvasCoords(e.clientX, e.clientY, rect);
+      const { x, y } = toCanvasCoords(
+        e.nativeEvent.offsetX,
+        e.nativeEvent.offsetY,
+      );
 
       if (x >= 0 && x < CANVAS_WIDTH && y >= 0 && y < CANVAS_HEIGHT) {
         coordsStore.emit({ x, y });

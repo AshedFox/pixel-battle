@@ -6,6 +6,17 @@ export const createCoordsStore = () => {
 
   return {
     emit: (coords: Pixel | null) => {
+      const isSame =
+        (coords === null && currentCoords === null) ||
+        (coords !== null &&
+          currentCoords !== null &&
+          coords.x === currentCoords.x &&
+          coords.y === currentCoords.y);
+
+      if (isSame) {
+        return;
+      }
+
       currentCoords = coords;
       listeners.forEach((l) => l(coords));
     },

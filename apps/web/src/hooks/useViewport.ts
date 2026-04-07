@@ -27,16 +27,13 @@ export const useViewport = () => {
     onChangeRef.current = fn;
   }, []);
 
-  const toCanvasCoords = useCallback(
-    (clientX: number, clientY: number, rect: DOMRect) => {
-      const { offsetX, offsetY, scale } = viewportRef.current;
-      return {
-        x: Math.floor((clientX - rect.left - offsetX) / scale),
-        y: Math.floor((clientY - rect.top - offsetY) / scale),
-      };
-    },
-    [],
-  );
+  const toCanvasCoords = useCallback((localX: number, localY: number) => {
+    const { offsetX, offsetY, scale } = viewportRef.current;
+    return {
+      x: Math.floor((localX - offsetX) / scale),
+      y: Math.floor((localY - offsetY) / scale),
+    };
+  }, []);
 
   const onWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
