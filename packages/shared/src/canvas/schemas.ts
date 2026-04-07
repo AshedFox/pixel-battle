@@ -51,3 +51,14 @@ export const pixelInfoResponseSchema = z.object({
 export const canvasSnapshotParamsSchema = z.object({
   timestamp: z.iso.datetime(),
 });
+
+export const canvasEventsParamsSchema = z.object({
+  timestamp: z.iso.datetime(),
+});
+
+export const canvasEventSchema = z.object({
+  x: z.int(),
+  y: z.int(),
+  color: z.int(),
+  timestamp: z.int(),
+});
