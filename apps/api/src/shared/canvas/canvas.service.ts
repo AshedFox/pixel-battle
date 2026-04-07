@@ -83,6 +83,13 @@ export class CanvasService {
           .then((r) => r[0]);
   }
 
+  async getEventsSince(timestamp: Date) {
+    return this.db
+      .select()
+      .from(drawEvents)
+      .where(gte(drawEvents.timestamp, timestamp));
+  }
+
   async getLastSnapshot(timestamp?: Date) {
     return timestamp
       ? this.db
