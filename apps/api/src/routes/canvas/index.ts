@@ -1,5 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import {
+  CanvasEventsParams,
+  canvasEventsParamsSchema,
   CanvasSnapshotParams,
   canvasSnapshotParamsSchema,
   cooldownResponseSchema,
@@ -9,6 +11,7 @@ import {
 } from '@repo/shared';
 import { PixelHistoryService } from '../../shared/canvas/pixel-history.service';
 import { config } from '../../config';
+import { encodeEvents } from '../../shared/binary/utils';
 
 export const canvasRoutes: FastifyPluginAsync = async (fastify) => {
   const pixelHistoryService = new PixelHistoryService(fastify.db);
@@ -81,6 +84,34 @@ export const canvasRoutes: FastifyPluginAsync = async (fastify) => {
         .code(200)
         .header('Content-Type', 'application/octet-stream')
         .send(state);
+    },
+  );
+
+  fastify.get<{ Params: CanvasEventsParams }>(
+    '/events/after/:timestamp',
+    {
+      preHandler: [fastify.authenticate, fastify.roleGuard('ADMIN')],
+      schema: {
+        params: canvasEventsParamsSchema,
+      },
+    },
+    async (request, reply) => {
+      const events = await fastify.canvas.service.getEventsSince(
+        new Date(request.params.timestamp),
+      );
+      const buffer = encodeEvents(
+        events.map(({ timestamp, ...e }) => ({
+          ...e,
+          timestamp: timestamp.getTime(),
+        })),
+      );
+
+      return reply
+        .code(200)
+        .header('Content-Type', 'application/octet-stream')
+        .header('Content-Length', buffer.length)
+        .header('X-Event-Format', 'hmap-v1')
+        .send(buffer);
     },
   );
 };
