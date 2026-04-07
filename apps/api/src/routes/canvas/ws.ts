@@ -101,12 +101,16 @@ export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
 
           const { x, color, y } = data;
 
-          const ok = await fastify.canvas.service.setUserCooldown(userId);
+          const { availableAt, ok } =
+            await fastify.canvas.service.setUserCooldown(userId);
 
           if (!ok) {
+            sendCooldown(socket, availableAt);
             sendError(socket, 'Cooldown');
             return;
           }
+
+          sendCooldown(socket, availableAt);
 
           pixelUpdateBatchService.publish({ x, y, color });
 
@@ -129,4 +133,15 @@ export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
 function sendError(socket: { send: (data: string) => void }, message: string) {
   const error: WsServerMessage = { type: 'error', data: { message } };
   socket.send(JSON.stringify(error));
+}
+
+function sendCooldown(
+  socket: { send: (data: string) => void },
+  availableAt: Date,
+) {
+  const message: WsServerMessage = {
+    type: 'cooldownUpdate',
+    data: { availableAt: availableAt.toISOString() },
+  };
+  socket.send(JSON.stringify(message));
 }
