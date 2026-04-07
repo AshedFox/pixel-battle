@@ -18,8 +18,12 @@ export const pixelUpdateSchema = z.object({
 
 export const pixelsUpdateSchema = z.array(pixelUpdateSchema);
 
-export const cooldownResponseSchema = z.object({
+export const cooldownSchema = z.object({
   availableAt: z.iso.datetime().nullable(),
+});
+
+export const cooldownResponseSchema = cooldownSchema.extend({
+  cooldownMs: z.number().int().min(0),
 });
 
 export const pixelInfoParamsSchema = z.object({

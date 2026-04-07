@@ -1,5 +1,5 @@
 import { ErrorResponse } from '../common';
-import { PixelsUpdateData, PixelUpdateData } from '../canvas/types';
+import { CooldownData, PixelUpdateData, PixelsUpdateData } from '../canvas';
 
 export type WsClientMessage = {
   type: 'setPixel';
@@ -16,4 +16,5 @@ export type WsServerMessage =
   | WsServerMessageWrapper<'pixelUpdated', PixelUpdateData>
   | WsServerMessageWrapper<'pixelsUpdated', PixelsUpdateData>
   | WsServerMessageWrapper<'onlineCount', number>
+  | { type: 'cooldownUpdate'; data: CooldownData }
   | { type: 'error'; data: ErrorResponse };

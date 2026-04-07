@@ -8,6 +8,7 @@ import {
   pixelInfoResponseSchema,
 } from '@repo/shared';
 import { PixelHistoryService } from '../../shared/canvas/pixel-history.service';
+import { config } from '../../config';
 
 export const canvasRoutes: FastifyPluginAsync = async (fastify) => {
   const pixelHistoryService = new PixelHistoryService(fastify.db);
@@ -32,9 +33,10 @@ export const canvasRoutes: FastifyPluginAsync = async (fastify) => {
         request.user.sub,
       );
 
-      return reply
-        .code(200)
-        .send({ availableAt: cooldown ? cooldown.toISOString() : null });
+      return reply.code(200).send({
+        availableAt: cooldown ? cooldown.toISOString() : null,
+        cooldownMs: config.PIXEL_COOLDOWN_MS,
+      });
     },
   );
 

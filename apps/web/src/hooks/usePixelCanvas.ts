@@ -20,6 +20,7 @@ type Props = {
   selectedColorIndex: number;
   pendingPixel: Pixel | null;
   onOnlineChange?: (newCount: number) => void;
+  onCooldownUpdate?: (availableAt: string | null) => void;
 };
 
 const WS_API_URL = import.meta.env.VITE_API_WS_URL;
@@ -31,6 +32,7 @@ export const usePixelCanvas = ({
   viewportRef,
   pendingPixel,
   onOnlineChange,
+  onCooldownUpdate,
 }: Props) => {
   const selectedColorRef = useRef(selectedColorIndex);
   selectedColorRef.current = selectedColorIndex;
@@ -76,22 +78,24 @@ export const usePixelCanvas = ({
       const parsed = msg as WsServerMessage;
       const { type, data } = parsed;
 
-      if (type !== 'error') {
+      if (
+        type === 'pixelUpdated' ||
+        type === 'pixelsUpdated' ||
+        type === 'onlineCount'
+      ) {
         const seq = parsed.seq;
 
-        if (typeof seq !== 'number') {
-          return;
-        }
+        if (typeof seq === 'number') {
+          if (
+            seq > 0 &&
+            lastSeqRef.current > 0 &&
+            seq !== lastSeqRef.current + 1
+          ) {
+            void syncCanvas();
+          }
 
-        if (
-          seq > 0 &&
-          lastSeqRef.current > 0 &&
-          seq !== lastSeqRef.current + 1
-        ) {
-          void syncCanvas();
+          lastSeqRef.current = seq;
         }
-
-        lastSeqRef.current = seq;
       }
 
       if (type === 'pixelUpdated') {
@@ -109,6 +113,8 @@ export const usePixelCanvas = ({
         scheduleRedraw();
       } else if (type === 'onlineCount') {
         onOnlineChange?.(data);
+      } else if (type === 'cooldownUpdate') {
+        onCooldownUpdate?.(data.availableAt);
       }
     },
     [
@@ -117,6 +123,7 @@ export const usePixelCanvas = ({
       writePixelToImageData,
       scheduleRedraw,
       onOnlineChange,
+      onCooldownUpdate,
     ],
   );
 

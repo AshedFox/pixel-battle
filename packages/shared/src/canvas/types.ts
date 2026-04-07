@@ -2,6 +2,7 @@ import z from 'zod';
 import {
   canvasSnapshotParamsSchema,
   cooldownResponseSchema,
+  cooldownSchema,
   pixelInfoParamsSchema,
   pixelInfoResponseSchema,
   pixelsUpdateSchema,
@@ -10,6 +11,7 @@ import {
 
 export type PixelUpdateData = z.infer<typeof pixelUpdateSchema>;
 export type PixelsUpdateData = z.infer<typeof pixelsUpdateSchema>;
+export type CooldownData = z.infer<typeof cooldownSchema>;
 export type CooldownResponse = z.infer<typeof cooldownResponseSchema>;
 export type PixelInfoParams = z.infer<typeof pixelInfoParamsSchema>;
 export type PixelInfoResponse = z.infer<typeof pixelInfoResponseSchema>;

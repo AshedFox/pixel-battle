@@ -141,20 +141,30 @@ export class CanvasService {
     return cooldownStr ? new Date(cooldownStr) : null;
   }
 
-  async setUserCooldown(userId: string): Promise<boolean> {
+  async setUserCooldown(
+    userId: string,
+  ): Promise<{ availableAt: Date; ok: boolean }> {
+    const nextAvailableAt = new Date(Date.now() + config.PIXEL_COOLDOWN_MS);
     const result = await this.redis.set(
       `${COOLDOWN_KEY_PREFIX}:${userId}`,
-      new Date(Date.now() + config.PIXEL_COOLDOWN_MS).toISOString(),
+      nextAvailableAt.toISOString(),
       'PX',
       config.PIXEL_COOLDOWN_MS,
       'NX',
     );
 
     if (result === null) {
-      return false;
+      const existing = await this.getUserCooldown(userId);
+      return {
+        availableAt: existing || nextAvailableAt,
+        ok: false,
+      };
     }
 
-    return true;
+    return {
+      availableAt: nextAvailableAt,
+      ok: true,
+    };
   }
 
   async syncWithDb(): Promise<void> {
