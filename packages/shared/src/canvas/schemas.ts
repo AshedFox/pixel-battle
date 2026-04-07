@@ -22,7 +22,9 @@ export const cooldownSchema = z.object({
   availableAt: z.iso.datetime().nullable(),
 });
 
-export const cooldownResponseSchema = cooldownSchema;
+export const cooldownResponseSchema = cooldownSchema.extend({
+  cooldownMs: z.number().int().min(0),
+});
 
 export const pixelInfoParamsSchema = z.object({
   x: z.coerce
