@@ -28,6 +28,9 @@ import { usePixelInfo } from '@/hooks/usePixelInfo';
 import { PixelInfoPopover } from './PixelInfoPopover';
 import { Spinner } from './ui/spinner';
 import { apiFetch } from '@/lib/api-client';
+import { useAuth } from './AuthProvider';
+import { PixelStream } from '@/lib/pixel-stream';
+import { AdminHeatmap, AdminHeatmapHandle } from './AdminHeatmap';
 
 const CanvasLoadingFallback = () => (
   <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
@@ -62,11 +65,13 @@ const PixelBoardContent = ({
   const initialData = use(canvasPromise);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const adminHeatmapRef = useRef<AdminHeatmapHandle>(null);
   const [selectedColor, setSelectedColor] = useState(0);
   const [pendingPixel, setPendingPixel] = useState<Pixel | null>(null);
   const [popupPos, setPopupPos] = useState<Pixel | null>(null);
   const coordsStore = useMemo(() => createCoordsStore(), []);
   const [onlineCount, setOnlineCount] = useState(0);
+  const [heatmapEnabled, setHeatmapEnabled] = useState(false);
 
   const {
     pixelInfo,
@@ -91,6 +96,14 @@ const PixelBoardContent = ({
   const { isOnCooldown, remainingMs, setCooldown, startOptimisticCooldown } =
     useCooldown();
 
+  const { role } = useAuth();
+  const isAdmin = role === 'ADMIN';
+
+  const pixelStream = useMemo(
+    () => (isAdmin ? new PixelStream() : null),
+    [isAdmin],
+  );
+
   const { placePixel, scheduleRedraw, getPixelColor } = usePixelCanvas({
     initialData,
     pendingPixel,
@@ -99,7 +112,9 @@ const PixelBoardContent = ({
     viewportRef: viewportRef,
     onOnlineChange: setOnlineCount,
     onCooldownUpdate: setCooldown,
+    onPixelUpdate: (x, y) => pixelStream?.emit(x, y),
   });
+
   const [isPending, startTransition] = useTransition();
 
   const isSameColor =
@@ -107,7 +122,10 @@ const PixelBoardContent = ({
     getPixelColor(pendingPixel.x, pendingPixel.y) === selectedColor;
 
   useEffect(() => {
-    setOnViewportChange(scheduleRedraw);
+    setOnViewportChange(() => {
+      scheduleRedraw();
+      adminHeatmapRef.current?.redrawHeatmap();
+    });
   }, [setOnViewportChange, scheduleRedraw]);
 
   useEffect(() => {
@@ -116,14 +134,13 @@ const PixelBoardContent = ({
 
   useEffect(() => {
     const observer = new ResizeObserver(([entry]) => {
-      if (!canvasRef.current) {
+      if (!canvasRef.current || !adminHeatmapRef.current) {
         return;
       }
 
       const { width, height } = entry.contentRect;
       canvasRef.current.width = Math.floor(width);
       canvasRef.current.height = Math.floor(height);
-
       scheduleRedraw();
     });
 
@@ -159,8 +176,10 @@ const PixelBoardContent = ({
       }
 
       if (e.button === 0) {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const { x, y } = toCanvasCoords(e.clientX, e.clientY, rect);
+        const { x, y } = toCanvasCoords(
+          e.nativeEvent.offsetX,
+          e.nativeEvent.offsetY,
+        );
 
         if (pendingPixel && x === pendingPixel.x && y === pendingPixel.y) {
           return;
@@ -258,12 +277,31 @@ const PixelBoardContent = ({
         onTouchStart={onTouchStart}
         onContextMenu={(e) => e.preventDefault()}
         className={cn(
-          'block touch-none',
+          'block touch-none absolute',
           isOnCooldown ? 'cursor-not-allowed' : 'cursor-crosshair',
         )}
         style={{ imageRendering: 'pixelated' }}
       />
+
+      {isAdmin && pixelStream && (
+        <AdminHeatmap
+          ref={adminHeatmapRef}
+          pixelStream={pixelStream}
+          viewportRef={viewportRef}
+          containerRef={containerRef}
+          onEnabledChange={setHeatmapEnabled}
+        />
+      )}
+
       <div className="absolute bottom-0 md:bottom-8 md:left-8 flex flex-col gap-2 items-center w-full md:w-fit">
+        {isAdmin && (
+          <Button
+            variant="outline"
+            onClick={() => adminHeatmapRef.current?.toggleHeatmap()}
+          >
+            {heatmapEnabled ? 'Hide Heatmap' : 'Show Heatmap'}
+          </Button>
+        )}
         {isDesktop ? (
           <>
             <ColorPicker selected={selectedColor} onChange={setSelectedColor} />
