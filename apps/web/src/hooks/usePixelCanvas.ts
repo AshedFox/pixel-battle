@@ -21,6 +21,7 @@ type Props = {
   pendingPixel: Pixel | null;
   onOnlineChange?: (newCount: number) => void;
   onCooldownUpdate?: (availableAt: string | null) => void;
+  onPixelUpdate?: (x: number, y: number) => void;
 };
 
 const WS_API_URL = import.meta.env.VITE_API_WS_URL;
@@ -33,6 +34,7 @@ export const usePixelCanvas = ({
   pendingPixel,
   onOnlineChange,
   onCooldownUpdate,
+  onPixelUpdate,
 }: Props) => {
   const selectedColorRef = useRef(selectedColorIndex);
   selectedColorRef.current = selectedColorIndex;
@@ -101,6 +103,7 @@ export const usePixelCanvas = ({
       if (type === 'pixelUpdated') {
         applyPixel(data.x, data.y, data.color);
         writePixelToImageData(data.x, data.y, data.color);
+        onPixelUpdate?.(data.x, data.y);
         scheduleRedraw();
       } else if (type === 'pixelsUpdated') {
         for (const { x, y, color } of data) {
@@ -109,6 +112,7 @@ export const usePixelCanvas = ({
           }
           applyPixel(x, y, color);
           writePixelToImageData(x, y, color);
+          onPixelUpdate?.(x, y);
         }
         scheduleRedraw();
       } else if (type === 'onlineCount') {
@@ -119,6 +123,7 @@ export const usePixelCanvas = ({
     },
     [
       syncCanvas,
+      onPixelUpdate,
       applyPixel,
       writePixelToImageData,
       scheduleRedraw,
