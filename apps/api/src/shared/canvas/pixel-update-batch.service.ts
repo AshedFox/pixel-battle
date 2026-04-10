@@ -66,8 +66,14 @@ export class PixelUpdateBatchService {
       return;
     }
 
-    const batch = [...this.buffer.values()];
-    this.buffer.clear();
+    const entries = [...this.buffer.entries()];
+    const chunk = entries.slice(0, config.PIXEL_UPDATE_BUFFER_MAX);
+
+    for (const [key] of chunk) {
+      this.buffer.delete(key);
+    }
+
+    const batch = chunk.map(([, pixel]) => pixel);
 
     await this.onFlush(batch);
 
