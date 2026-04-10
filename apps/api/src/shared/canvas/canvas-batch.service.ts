@@ -85,6 +85,7 @@ export class CanvasBatchService {
     try {
       await this.onFlush(events);
       await this.redis.xack(STREAM_KEY, GROUP_NAME, ...ids);
+      await this.redis.xdel(STREAM_KEY, ...ids);
     } catch {
       console.error('Failed to process stream batch');
     }
