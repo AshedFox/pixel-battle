@@ -5,6 +5,7 @@ import {
   canvasSnapshotParamsSchema,
   cooldownResponseSchema,
   cooldownSchema,
+  drawRectSchema,
   pixelInfoParamsSchema,
   pixelInfoResponseSchema,
   pixelsUpdateSchema,
@@ -13,6 +14,7 @@ import {
 
 export type PixelUpdateData = z.infer<typeof pixelUpdateSchema>;
 export type PixelsUpdateData = z.infer<typeof pixelsUpdateSchema>;
+export type DrawRectData = z.infer<typeof drawRectSchema>;
 export type CooldownData = z.infer<typeof cooldownSchema>;
 export type CooldownResponse = z.infer<typeof cooldownResponseSchema>;
 export type PixelInfoParams = z.infer<typeof pixelInfoParamsSchema>;

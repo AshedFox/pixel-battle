@@ -84,3 +84,5 @@ export const CANVAS_COLORS_RGB = CANVAS_COLORS.map((hex) => [
 ]);
 
 export type CanvasColor = (typeof CANVAS_COLORS)[number];
+
+export const MAX_FILL_AREA = 200_000;

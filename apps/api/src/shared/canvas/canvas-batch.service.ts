@@ -20,6 +20,21 @@ export class CanvasBatchService {
     await this.redis.xadd(STREAM_KEY, '*', 'data', JSON.stringify(event));
   }
 
+  async addBulk(events: NewDrawEvent[]) {
+    const CHUNK_SIZE = 5000;
+
+    for (let i = 0; i < events.length; i += CHUNK_SIZE) {
+      const chunk = events.slice(i, i + CHUNK_SIZE);
+      const pipeline = this.redis.pipeline();
+
+      chunk.forEach((event) => {
+        pipeline.xadd(STREAM_KEY, '*', 'data', JSON.stringify(event));
+      });
+
+      await pipeline.exec();
+    }
+  }
+
   async recoverProcessing() {
     await this.claimPending();
   }
