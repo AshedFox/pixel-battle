@@ -1,7 +1,7 @@
-import { usePixelBoard } from '@/hooks/usePixelBoard';
+import { CanvasHandlers, usePixelBoard } from '@/hooks/usePixelBoard';
 import { cn } from '@/lib/utils';
 import { MoreVerticalIcon } from 'lucide-react';
-import { ReactNode, use } from 'react';
+import { ReactNode } from 'react';
 import { ColorPicker } from './ColorPicker';
 import { CoordsBadge } from './CoordsBadge';
 import { PixelInfoPopover } from './PixelInfoPopover';
@@ -12,39 +12,29 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 
 type Props = {
-  canvasPromise: Promise<Uint8Array>;
-  onPixelUpdate?: (x: number, y: number) => void;
-  onViewportChange?: () => void;
-  controlsSlot?: (base: ReturnType<typeof usePixelBoard>) => ReactNode;
-  badgesSlot?: (base: ReturnType<typeof usePixelBoard>) => ReactNode;
-  overlaysSlot?: (base: ReturnType<typeof usePixelBoard>) => ReactNode;
+  base: ReturnType<typeof usePixelBoard>;
+  canvasHandlers?: Partial<CanvasHandlers>;
+  controlsSlot?: ReactNode;
+  badgesSlot?: ReactNode;
+  overlaysSlot?: ReactNode;
 };
 
 export const BasePixelBoard = ({
-  canvasPromise,
-  onPixelUpdate,
-  onViewportChange,
+  base,
+  canvasHandlers,
   badgesSlot,
   controlsSlot,
   overlaysSlot,
 }: Props) => {
-  const initialData = use(canvasPromise);
-  const base = usePixelBoard({ initialData, onPixelUpdate, onViewportChange });
-
-  const { containerRef, canvasRef } = base;
+  const handlers = { ...base.canvasHandlers, ...canvasHandlers };
+  const { canvasRef, containerRef } = base.refs;
   const {
-    onWheel,
-    onMouseUp,
-    onTouchEnd,
-    onTouchMove,
-    onTouchStart,
-    handleMouseDown,
-    handleMouseLeave,
-    handleMouseMove,
     handleConfirm,
     handlePixelPopoverClose,
-  } = base;
-  const {
+    setSelectedColor,
+    setPendingPixel,
+    getPlaceText,
+    getPixelColor,
     isOnCooldown,
     isDesktop,
     selectedColor,
@@ -57,21 +47,12 @@ export const BasePixelBoard = ({
     onlineCount,
     coordsStore,
   } = base;
-  const { setSelectedColor, setPendingPixel, getPlaceText, getPixelColor } =
-    base;
 
   return (
     <div ref={containerRef} className="absolute inset-0 @container">
       <canvas
         ref={canvasRef}
-        onWheel={onWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={handleMouseLeave}
-        onTouchEnd={onTouchEnd}
-        onTouchMove={onTouchMove}
-        onTouchStart={onTouchStart}
+        {...handlers}
         onContextMenu={(e) => e.preventDefault()}
         className={cn(
           'block touch-none absolute',
@@ -80,10 +61,10 @@ export const BasePixelBoard = ({
         style={{ imageRendering: 'pixelated' }}
       />
 
-      {overlaysSlot?.(base)}
+      {overlaysSlot}
 
       <div className="absolute bottom-0 md:bottom-8 md:left-8 flex flex-col gap-2 items-center w-full md:w-fit">
-        {controlsSlot?.(base)}
+        {controlsSlot}
         {isDesktop ? (
           <>
             <ColorPicker selected={selectedColor} onChange={setSelectedColor} />
@@ -146,7 +127,7 @@ export const BasePixelBoard = ({
           <div className="rounded-full bg-green-500 size-2" /> {onlineCount}{' '}
           online
         </Badge>
-        {badgesSlot?.(base)}
+        {badgesSlot}
       </div>
       <div className="absolute top-2 left-[50%] -translate-x-[50%]">
         <CoordsBadge coordsStore={coordsStore} />

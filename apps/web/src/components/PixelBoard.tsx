@@ -3,7 +3,7 @@ import { Spinner } from './ui/spinner';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from './AuthProvider';
 import { AdminPixelBoard } from './AdminPixelBoard';
-import { BasePixelBoard } from './BasePixelBoard';
+import { UserPixelBoard } from './UserPixelBoard';
 
 const CanvasLoadingFallback = () => (
   <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
@@ -29,7 +29,7 @@ export const PixelBoard = () => {
         {role === 'ADMIN' ? (
           <AdminPixelBoard canvasPromise={canvasPromise} />
         ) : (
-          <BasePixelBoard canvasPromise={canvasPromise} />
+          <UserPixelBoard canvasPromise={canvasPromise} />
         )}
       </Suspense>
     </div>
