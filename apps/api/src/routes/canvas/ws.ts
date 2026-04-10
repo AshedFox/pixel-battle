@@ -1,4 +1,5 @@
 import {
+  drawRectSchema,
   pixelUpdateSchema,
   WsClientMessage,
   WsServerMessage,
@@ -11,6 +12,7 @@ import { CanvasOnlineService } from '../../shared/canvas/canvas-online.service';
 import { randomUUID } from 'crypto';
 import { CanvasSeqService } from '../../shared/canvas/canvas-seq.service';
 import { UserJwtPayload } from '../../shared/auth/types';
+import { NewDrawEvent } from '../../db/schema/draw-events';
 
 export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
   const pubSub = new PubSubService(
@@ -53,8 +55,9 @@ export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
     }
 
     let userId: string;
+    let decoded: UserJwtPayload;
     try {
-      const decoded = fastify.jwt.verify<UserJwtPayload>(token);
+      decoded = fastify.jwt.verify<UserJwtPayload>(token);
       if (decoded.status !== 'CONFIRMED') {
         sendError(socket, 'Invalid or expired token');
         socket.close(4001, 'Unauthorized');
@@ -121,6 +124,43 @@ export const canvasWsRoute: FastifyPluginAsync = async (fastify) => {
             userId,
             timestamp: new Date(),
           });
+        } else if (message.type === 'drawRect') {
+          if (decoded.role !== 'ADMIN') {
+            sendError(socket, 'Forbidden');
+            return;
+          }
+
+          const { success, data } = await drawRectSchema.safeParseAsync(
+            message.data,
+          );
+
+          if (!success) {
+            sendError(socket, 'Invalid rectangle coordinates or color');
+            return;
+          }
+
+          const { x, y, width, height, color } = data;
+
+          await pixelUpdateBatchService.flush();
+          fastify.canvas.service.setRect(data);
+          pubSub.publish({ type: 'rectDrawn', data });
+
+          const events: NewDrawEvent[] = [];
+          const timestamp = new Date();
+
+          for (let dx = 0; dx < width; dx++) {
+            for (let dy = 0; dy < height; dy++) {
+              events.push({
+                x: x + dx,
+                y: y + dy,
+                color,
+                userId: null,
+                timestamp,
+              });
+            }
+          }
+
+          await fastify.canvas.batchService.addBulk(events);
         }
       } catch (e) {
         console.log(e);
