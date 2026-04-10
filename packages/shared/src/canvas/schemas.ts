@@ -1,5 +1,10 @@
 import z from 'zod';
-import { CANVAS_COLORS, CANVAS_HEIGHT, CANVAS_WIDTH } from './constants';
+import {
+  CANVAS_COLORS,
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
+  MAX_FILL_AREA,
+} from './constants';
 
 export const pixelUpdateSchema = z.object({
   x: z
@@ -17,6 +22,42 @@ export const pixelUpdateSchema = z.object({
 });
 
 export const pixelsUpdateSchema = z.array(pixelUpdateSchema);
+
+export const drawRectSchema = z
+  .object({
+    x: z
+      .int32()
+      .min(0)
+      .max(CANVAS_WIDTH - 1),
+    y: z
+      .int32()
+      .min(0)
+      .max(CANVAS_HEIGHT - 1),
+    width: z.int32().min(1),
+    height: z.int32().min(1),
+    color: z
+      .int32()
+      .min(0)
+      .max(CANVAS_COLORS.length - 1),
+  })
+  .refine(
+    ({ x, width, y, height }) => {
+      return x + width <= CANVAS_WIDTH && y + height <= CANVAS_HEIGHT;
+    },
+    {
+      path: ['x', 'width', 'y', 'height'],
+      error: 'Rectangle is out of canvas borders',
+    },
+  )
+  .refine(
+    ({ height, width }) => {
+      return height * width <= MAX_FILL_AREA;
+    },
+    {
+      path: ['width', 'height'],
+      error: `Rectanпle is too big (max area: ${MAX_FILL_AREA})`,
+    },
+  );
 
 export const cooldownSchema = z.object({
   availableAt: z.iso.datetime().nullable(),
