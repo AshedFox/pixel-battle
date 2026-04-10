@@ -31,7 +31,7 @@ export class PixelUpdateBatchService {
     this.scheduleFlush();
   }
 
-  private async flush(): Promise<void> {
+  public async flush(): Promise<void> {
     if (this.flushPromise) {
       return;
     }
