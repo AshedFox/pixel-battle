@@ -8,10 +8,13 @@ import {
   CANVAS_HEIGHT,
   WsClientMessage,
   WsServerMessage,
+  MAX_FILL_AREA,
 } from '@repo/shared';
 import { useAuth } from '@/components/AuthProvider';
 import { Pixel } from '@/types/pixel';
 import { apiFetch } from '@/lib/api-client';
+import { Selection } from './useDrawRect';
+import { toast } from 'sonner';
 
 type Props = {
   initialData: Uint8Array;
@@ -19,6 +22,7 @@ type Props = {
   viewportRef: React.RefObject<Viewport>;
   selectedColorIndex: number;
   pendingPixel: Pixel | null;
+  selectionRef?: React.RefObject<Selection | null>;
   onOnlineChange?: (newCount: number) => void;
   onCooldownUpdate?: (availableAt: string | null) => void;
   onPixelUpdate?: (x: number, y: number) => void;
@@ -32,6 +36,7 @@ export const usePixelCanvas = ({
   selectedColorIndex,
   viewportRef,
   pendingPixel,
+  selectionRef,
   onOnlineChange,
   onCooldownUpdate,
   onPixelUpdate,
@@ -50,6 +55,7 @@ export const usePixelCanvas = ({
       viewportRef,
       pendingPixelRef,
       selectedColorRef,
+      selectionRef,
     });
 
   const { authData } = useAuth();
@@ -83,7 +89,8 @@ export const usePixelCanvas = ({
       if (
         type === 'pixelUpdated' ||
         type === 'pixelsUpdated' ||
-        type === 'onlineCount'
+        type === 'onlineCount' ||
+        type === 'rectDrawn'
       ) {
         const seq = parsed.seq;
 
@@ -113,6 +120,28 @@ export const usePixelCanvas = ({
           applyPixel(x, y, color);
           writePixelToImageData(x, y, color);
           onPixelUpdate?.(x, y);
+        }
+        scheduleRedraw();
+      } else if (type === 'rectDrawn') {
+        const { x, y, width, height, color } = data;
+
+        for (let dx = 0; dx < width; dx++) {
+          for (let dy = 0; dy < height; dy++) {
+            const curX = x + dx;
+            const curY = y + dy;
+
+            if (
+              curX < 0 ||
+              curX >= CANVAS_WIDTH ||
+              curY < 0 ||
+              curY >= CANVAS_HEIGHT
+            ) {
+              continue;
+            }
+
+            applyPixel(curX, curY, color);
+            writePixelToImageData(curX, curY, color);
+          }
         }
         scheduleRedraw();
       } else if (type === 'onlineCount') {
@@ -159,5 +188,32 @@ export const usePixelCanvas = ({
     [applyPixel, writePixelToImageData, scheduleRedraw, send],
   );
 
-  return { placePixel, scheduleRedraw, getPixelColor };
+  const drawRect = useCallback(
+    (x: number, y: number, width: number, height: number) => {
+      if (width * height > MAX_FILL_AREA) {
+        toast.error(
+          `Selected rectangle is too big (max area ${MAX_FILL_AREA})`,
+        );
+        return;
+      }
+
+      const color = selectedColorRef.current;
+
+      for (let dy = 0; dy < height; dy++) {
+        for (let dx = 0; dx < width; dx++) {
+          applyPixel(x + dx, y + dy, color);
+          writePixelToImageData(x + dx, y + dy, color);
+        }
+      }
+
+      scheduleRedraw();
+      send({
+        type: 'drawRect',
+        data: { x, y, width, height, color },
+      } satisfies WsClientMessage);
+    },
+    [applyPixel, writePixelToImageData, scheduleRedraw, send, selectedColorRef],
+  );
+
+  return { placePixel, scheduleRedraw, getPixelColor, drawRect };
 };
