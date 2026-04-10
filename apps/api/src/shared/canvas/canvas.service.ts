@@ -9,7 +9,7 @@ import { config } from '../../config';
 import { Database } from '../../db';
 import { drawEvents } from '../../db/schema/draw-events';
 import { canvasSnapshots } from '../../db/schema/canvas-snapshots';
-import { and, asc, count, desc, gte, lte } from 'drizzle-orm';
+import { and, asc, count, desc, gte, lte, isNotNull } from 'drizzle-orm';
 import { streamQuery } from '../pg/stream';
 
 const CANVAS_KEY = 'canvas:state';
@@ -87,7 +87,9 @@ export class CanvasService {
     return this.db
       .select()
       .from(drawEvents)
-      .where(gte(drawEvents.timestamp, timestamp));
+      .where(
+        and(gte(drawEvents.timestamp, timestamp), isNotNull(drawEvents.userId)),
+      );
   }
 
   async getLastSnapshot(timestamp?: Date) {
