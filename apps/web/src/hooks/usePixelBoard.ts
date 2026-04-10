@@ -1,4 +1,5 @@
 import {
+  RefObject,
   useCallback,
   useEffect,
   useMemo,
@@ -7,13 +8,31 @@ import {
   useTransition,
 } from 'react';
 import { usePixelCanvas } from './usePixelCanvas';
-import { useViewport } from './useViewport';
+import { useViewport, Viewport } from './useViewport';
 import { useCooldown } from './useCooldown';
 import { createCoordsStore } from '@/lib/coords-store';
 import { usePixelInfo } from './usePixelInfo';
 import { useMediaQuery } from './useMediaQuery';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from '@repo/shared';
 import { Pixel } from '@/types/pixel';
+
+export type CanvasHandlers = Pick<
+  React.ComponentProps<'canvas'>,
+  | 'onMouseDown'
+  | 'onMouseMove'
+  | 'onMouseUp'
+  | 'onMouseLeave'
+  | 'onWheel'
+  | 'onTouchStart'
+  | 'onTouchMove'
+  | 'onTouchEnd'
+>;
+
+export type PixelBoardRefs = {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  canvasRef: RefObject<HTMLCanvasElement | null>;
+  viewportRef: RefObject<Viewport>;
+};
 
 type Props = {
   initialData: Uint8Array;
@@ -217,9 +236,21 @@ export const usePixelBoard = ({
   const isDesktop = useMediaQuery('(min-width: 768px)', { defaultValue: true });
 
   return {
-    containerRef,
-    canvasRef,
-    viewportRef,
+    canvasHandlers: {
+      onMouseDown: handleMouseDown,
+      onMouseMove: handleMouseMove,
+      onMouseLeave: handleMouseLeave,
+      onWheel,
+      onMouseUp,
+      onTouchStart,
+      onTouchMove,
+      onTouchEnd,
+    } satisfies CanvasHandlers,
+    refs: {
+      containerRef,
+      canvasRef,
+      viewportRef,
+    } satisfies PixelBoardRefs,
     selectedColor,
     setSelectedColor,
     pendingPixel,
@@ -237,15 +268,7 @@ export const usePixelBoard = ({
     getPixelColor,
     scheduleRedraw,
     handleConfirm,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseLeave,
     handlePixelPopoverClose,
     getPlaceText,
-    onWheel,
-    onMouseUp,
-    onTouchStart,
-    onTouchMove,
-    onTouchEnd,
   };
 };
