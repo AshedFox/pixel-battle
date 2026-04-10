@@ -1,13 +1,20 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { CANVAS_WIDTH, CANVAS_HEIGHT, CANVAS_COLORS_RGB } from '@repo/shared';
+import {
+  CANVAS_WIDTH,
+  CANVAS_HEIGHT,
+  CANVAS_COLORS_RGB,
+  MAX_FILL_AREA,
+} from '@repo/shared';
 import { Viewport } from './useViewport';
 import { Pixel } from '@/types/pixel';
+import { Selection } from './useDrawRect';
 
 type Props = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   viewportRef: React.RefObject<Viewport>;
   pendingPixelRef: React.RefObject<Pixel | null>;
   selectedColorRef: React.RefObject<number>;
+  selectionRef?: React.RefObject<Selection | null>;
 };
 
 export const useCanvasRenderer = ({
@@ -15,6 +22,7 @@ export const useCanvasRenderer = ({
   viewportRef,
   pendingPixelRef,
   selectedColorRef,
+  selectionRef,
 }: Props) => {
   const offscreen = useRef<HTMLCanvasElement | null>(null);
   const offscreenCtx = useRef<CanvasRenderingContext2D | null>(null);
@@ -133,7 +141,29 @@ export const useCanvasRenderer = ({
       ctx.lineWidth = 1.5;
       ctx.strokeRect(px - nudge - 1.5, py - nudge - 1.5, size + 3, size + 3);
     }
-  }, [canvasRef, viewportRef, pendingPixelRef, selectedColorRef]);
+
+    const selection = selectionRef?.current;
+
+    if (selection) {
+      const w = Math.abs(selection.x2 - selection.x1) + 1;
+      const h = Math.abs(selection.y2 - selection.y1) + 1;
+      const sx = offsetX + Math.min(selection.x1, selection.x2) * scale;
+      const sy = offsetY + Math.min(selection.y1, selection.y2) * scale;
+      const sw = w * scale;
+      const sh = h * scale;
+
+      const isValid = w * h <= MAX_FILL_AREA;
+
+      ctx.fillStyle = isValid ? 'rgba(0,120,255,0.15)' : 'rgba(255,50,0,0.15)';
+      ctx.fillRect(sx, sy, sw, sh);
+
+      ctx.strokeStyle = isValid ? 'rgba(0,120,255,0.9)' : 'rgba(255,50,0,0.9)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(sx, sy, sw, sh);
+      ctx.setLineDash([]);
+    }
+  }, [canvasRef, viewportRef, pendingPixelRef, selectionRef, selectedColorRef]);
 
   const scheduleRedraw = useCallback(() => {
     if (rafPending.current) {
