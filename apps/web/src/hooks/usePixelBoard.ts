@@ -15,6 +15,7 @@ import { usePixelInfo } from './usePixelInfo';
 import { useMediaQuery } from './useMediaQuery';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from '@repo/shared';
 import { Pixel } from '@/types/pixel';
+import { Selection } from './useDrawRect';
 
 export type CanvasHandlers = Pick<
   React.ComponentProps<'canvas'>,
@@ -36,12 +37,14 @@ export type PixelBoardRefs = {
 
 type Props = {
   initialData: Uint8Array;
+  selectionRef?: RefObject<Selection | null>;
   onPixelUpdate?: (x: number, y: number) => void;
   onViewportChange?: () => void;
 };
 
 export const usePixelBoard = ({
   initialData,
+  selectionRef,
   onPixelUpdate,
   onViewportChange,
 }: Props) => {
@@ -76,16 +79,18 @@ export const usePixelBoard = ({
   const { isOnCooldown, remainingMs, setCooldown, startOptimisticCooldown } =
     useCooldown();
 
-  const { placePixel, scheduleRedraw, getPixelColor } = usePixelCanvas({
-    initialData,
-    pendingPixel,
-    canvasRef,
-    selectedColorIndex: selectedColor,
-    viewportRef,
-    onOnlineChange: setOnlineCount,
-    onCooldownUpdate: setCooldown,
-    onPixelUpdate,
-  });
+  const { placePixel, scheduleRedraw, getPixelColor, drawRect } =
+    usePixelCanvas({
+      initialData,
+      pendingPixel,
+      canvasRef,
+      selectionRef,
+      selectedColorIndex: selectedColor,
+      viewportRef,
+      onOnlineChange: setOnlineCount,
+      onCooldownUpdate: setCooldown,
+      onPixelUpdate,
+    });
 
   const [isPending, startTransition] = useTransition();
 
@@ -270,5 +275,6 @@ export const usePixelBoard = ({
     handleConfirm,
     handlePixelPopoverClose,
     getPlaceText,
+    drawRect,
   };
 };
