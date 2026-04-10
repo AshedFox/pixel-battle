@@ -2,6 +2,7 @@ import {
   CANVAS_COLORS,
   CANVAS_SIZE,
   CANVAS_WIDTH,
+  DrawRectData,
   PixelUpdateData,
 } from '@repo/shared';
 import Redis from 'ioredis';
@@ -131,6 +132,18 @@ export class CanvasService {
     for (const { x, y, color } of pixels) {
       const offset = y * CANVAS_WIDTH + x;
       pipeline.setrange(CANVAS_KEY, offset, this.colorsBuffers[color]);
+    }
+
+    await pipeline.exec();
+  }
+
+  async setRect({ x, y, width, height, color }: DrawRectData): Promise<void> {
+    const pipeline = this.redis.pipeline();
+    const rowBuffer = Buffer.alloc(width, color);
+
+    for (let dy = 0; dy < height; dy++) {
+      const offset = (y + dy) * CANVAS_WIDTH + x;
+      pipeline.setrange(CANVAS_KEY, offset, rowBuffer);
     }
 
     await pipeline.exec();
